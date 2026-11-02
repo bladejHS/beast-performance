@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05050a">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Beast Performance: protocolul zilnic pentru hormoni, analize, recuperare și performanță maximă, după faza în care ești.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Beast Performance">
+<title>Beast Performance</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="splash/emblem.webp" as="image" type="image/webp">
+<link rel="preload" href="fonts/saira-latin-standard-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/barlow-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:Saira;font-style:italic;font-display:swap;font-weight:100 900;font-stretch:50% 125%;src:url(fonts/saira-latin-standard-italic.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:Saira;font-style:italic;font-display:swap;font-weight:100 900;font-stretch:50% 125%;src:url(fonts/saira-latin-ext-standard-italic.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+1EF2-1EFF,U+20A0-20AB,U+20AD-20C0,U+2C60-2C7F,U+A720-A7FF}
+html,body{margin:0;background:#05050a;color:#f3f4f8}
+/* THE FUSION, about 3 s. Inner Beast comes from the left in red, Beast Nutrition from the right in blue.
+   0–.8 the two half wolves run in behind their light; .8 they lock on the seam, one flash; .9–1.8 the 44 hormones light up around the head, system by system;
+   1.8–2.4 the name; 2.5–3 the seam opens like a door and the app is behind it. Only transform, opacity and stroke move. Scripted below. */
+#splash{position:fixed;inset:0;z-index:100;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent;color:#f3f4f8;animation:sp-guard 0s linear 8s forwards}
+@keyframes sp-guard{to{visibility:hidden;pointer-events:none}}
+.sp-door{position:absolute;top:0;bottom:0;width:50.5%;background:#05050a}
+.sp-door.l{left:0;background:radial-gradient(130% 55% at 100% 44%,#13060a 0,#05050a 72%)}
+.sp-door.r{right:0;background:radial-gradient(130% 55% at 0 44%,#060c18 0,#05050a 72%)}
+.sp-stage{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:clamp(14px,3vh,30px);--w:min(58vw,36vh,300px)}
+.sp-core{position:relative;width:calc(var(--w)*1.62);aspect-ratio:1;display:grid;place-items:center}
+.sp-ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.sp-ring line{stroke:#2e3142;stroke-width:6;stroke-linecap:butt;opacity:0}
+.sp-wolf{position:relative;width:var(--w);aspect-ratio:680/801}
+.sp-half{position:absolute;inset:0;background:url(splash/emblem.webp) center/100% 100% no-repeat;opacity:0;will-change:transform,opacity}
+.sp-half.l{clip-path:inset(0 50% 0 0);transform:translateX(-70vw)}
+.sp-half.r{clip-path:inset(0 0 0 50%);transform:translateX(70vw)}
+.sp-streak{position:absolute;top:45%;height:3px;width:110vw;opacity:0;will-change:transform}
+.sp-streak.l{left:-110vw;background:linear-gradient(90deg,transparent,#c0141d 55%,#ff3b2f 92%,#ffe0d8);box-shadow:0 0 18px #ff3b2f}
+.sp-streak.r{right:-110vw;background:linear-gradient(270deg,transparent,#136be6 55%,#2f8cff 92%,#dcebff);box-shadow:0 0 18px #2f8cff}
+.sp-flash{position:absolute;left:50%;top:45%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#fff;box-shadow:0 0 60px 30px rgba(255,255,255,.75),-30px 0 90px 40px rgba(255,59,47,.5),30px 0 90px 40px rgba(47,140,255,.5);opacity:0}
+.sp-shock{position:absolute;left:50%;top:45%;width:40vmin;height:40vmin;margin:-20vmin 0 0 -20vmin;border-radius:50%;border:1.5px solid rgba(255,255,255,.65);opacity:0}
+.sp-seam{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:linear-gradient(180deg,transparent,#ff3b2f 22%,#fff 50%,#2f8cff 78%,transparent);opacity:0;transform:scaleY(0)}
+.sp-id{text-align:center}
+.sp-name{margin:0;font:italic 800 clamp(42px,13vw,74px)/.98 Saira,'Arial Narrow',Impact,sans-serif;font-stretch:88%;letter-spacing:.02em;white-space:nowrap}
+.sp-name b{display:block;font-weight:800}
+.sp-name span{display:block;font-weight:500;font-size:.56em;letter-spacing:.23em;margin-right:-.23em;color:#bcc0cf;font-style:normal;font-stretch:100%}
+.sp-name b,.sp-name span,.sp-tag{opacity:0;transform:translateY(8px)}
+.sp-tag{margin:10px 0 0;font:500 clamp(13px,3.4vw,15px)/1.3 Barlow,system-ui,sans-serif;color:#8e93a6}
+.sp-go .sp-streak.l{animation:sp-run .75s cubic-bezier(.7,0,.2,1) both}
+.sp-go .sp-streak.r{animation:sp-runr .75s cubic-bezier(.7,0,.2,1) both}
+.sp-go .sp-half{animation:sp-lock .72s cubic-bezier(.75,0,.15,1) .06s forwards}
+.sp-go .sp-flash{animation:sp-flash .55s ease-out .78s both}
+.sp-go .sp-shock{animation:sp-shock .8s cubic-bezier(.1,.7,.2,1) .78s both}
+.sp-go .sp-seam{animation:sp-seam .5s ease-out .74s both}
+.sp-go .sp-wolf{animation:sp-hit .32s ease-out .78s}
+.sp-go .sp-name b{animation:sp-in .4s cubic-bezier(.2,.8,.2,1) 1.72s forwards}
+.sp-go .sp-name span{animation:sp-in .4s cubic-bezier(.2,.8,.2,1) 1.86s forwards}
+.sp-go .sp-tag{animation:sp-in .4s ease-out 2.02s forwards}
+@keyframes sp-run{0%{transform:none;opacity:1}85%{transform:translateX(50vw);opacity:1}100%{transform:translateX(50vw);opacity:0}}
+@keyframes sp-runr{0%{transform:none;opacity:1}85%{transform:translateX(-50vw);opacity:1}100%{transform:translateX(-50vw);opacity:0}}
+@keyframes sp-lock{0%{opacity:0}35%{opacity:1}100%{opacity:1;transform:none}}
+@keyframes sp-flash{0%{opacity:1;transform:scale(.3)}100%{opacity:0;transform:scale(2.4)}}
+@keyframes sp-shock{0%{opacity:.8;transform:scale(.1)}100%{opacity:0;transform:scale(2.6)}}
+@keyframes sp-seam{0%{opacity:1;transform:scaleY(0)}60%{opacity:1;transform:scaleY(1)}100%{opacity:0;transform:scaleY(1)}}
+@keyframes sp-hit{0%{transform:scale(1.05)}100%{transform:none}}
+@keyframes sp-in{to{opacity:1;transform:none}}
+.sp-out .sp-stage{opacity:0;transition:opacity .18s}
+.sp-out .sp-seam{opacity:1;transform:none}
+.sp-out .sp-door{transition:transform .5s cubic-bezier(.7,0,.2,1)}
+.sp-out .sp-door.l{transform:translateX(-101%)}
+.sp-out .sp-door.r{transform:translateX(101%)}
+.sp-still .sp-half,.sp-still .sp-ring line,.sp-still .sp-name b,.sp-still .sp-name span,.sp-still .sp-tag{opacity:1;transform:none;animation:none}
+@media (prefers-reduced-motion:reduce){.sp-streak,.sp-flash,.sp-shock,.sp-seam{display:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="splash" role="img" aria-label="Beast Performance">
+  <div class="sp-door l"></div><div class="sp-door r"></div>
+  <div class="sp-streak l"></div><div class="sp-streak r"></div>
+  <div class="sp-stage">
+    <div class="sp-core">
+      <svg class="sp-ring" viewBox="-100 -100 200 200" aria-hidden="true"></svg>
+      <div class="sp-wolf"><div class="sp-half l"></div><div class="sp-half r"></div></div>
+    </div>
+    <div class="sp-id">
+      <h1 class="sp-name"><b>BEAST</b><span>PERFORMANCE</span></h1>
+      <p class="sp-tag">44 de hormoni. Un singur sistem.</p>
+    </div>
+  </div>
+  <div class="sp-seam"></div><div class="sp-flash"></div><div class="sp-shock"></div>
+</div>
+<script>
+// The opening. Plays once per session; a tap skips it; reduced motion shows it still.
+(function () {
+  var sp = document.getElementById('splash');
+  var seen = false;
+  try { seen = sessionStorage.getItem('bp:opened') === '1'; sessionStorage.setItem('bp:opened', '1'); } catch (e) {}
+  if (seen) { sp.remove(); return; }
+  // The 44 ticks in the nine groups of the database: 9, 4, 5, 5, 6, 5, 2, 4, 4.
+  var groups = [9, 4, 5, 5, 6, 5, 2, 4, 4], svg = sp.querySelector('.sp-ring'), ns = 'http://www.w3.org/2000/svg', gap = 2.6;
+  var step = (360 - gap * groups.length) / 44, a = gap / 2, i = 0, ticks = [];
+  groups.forEach(function (n) {
+    for (var k = 0; k < n; k++, i++) {
+      var t = (a + step * .5) * Math.PI / 180, l = document.createElementNS(ns, 'line');
+      l.setAttribute('x1', 84 * Math.cos(t)); l.setAttribute('y1', 84 * Math.sin(t));
+      l.setAttribute('x2', 96 * Math.cos(t)); l.setAttribute('y2', 96 * Math.sin(t));
+      l.style.strokeWidth = Math.min(4.6, step * 1.75 * .62) + '';
+      svg.appendChild(l); ticks.push(l); a += step;
+    }
+    a += gap;
+  });
+  var still = matchMedia('(prefers-reduced-motion: reduce)').matches, closed = false;
+  ticks.forEach(function (l, n) {
+    var c = n / 43 < .5 ? '#2f8cff' : '#ff3b2f';
+    if (still) { l.style.stroke = c; return; }
+    l.animate([{ opacity: 0, stroke: '#ffffff' }, { opacity: 1, stroke: '#ffffff', offset: .4 }, { opacity: 1, stroke: c }], { duration: 460, delay: 880 + n * 19, fill: 'forwards', easing: 'ease-out' });
+  });
+  function close() {
+    if (closed) return; closed = true;
+    sp.classList.add('sp-out');
+    setTimeout(function () { sp.remove(); }, 620);
+  }
+  sp.classList.add(still ? 'sp-still' : 'sp-go');
+  sp.addEventListener('click', close);
+  setTimeout(close, still ? 1100 : 2750);
+})();
+</script>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

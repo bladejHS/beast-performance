@@ -1,0 +1,17 @@
+{
+  "name": "Beast Performance",
+  "short_name": "Beast Performance",
+  "description": "Protocolul zilnic pentru hormoni, analize, recuperare și performanță maximă.",
+  "lang": "ro",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#05050a",
+  "theme_color": "#05050a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
