@@ -6,10 +6,10 @@ import { BIOMARKER } from '../data/biomarkers.ts';
 import type { Link } from './bridge.ts';
 import { dayView } from './bridge.ts';
 import { latest, patterns } from './labs.ts';
-import { caffeineCutoff } from './plan.ts';
-import { avgEA, avgOf, readiness, trainingLoad, weightTrend } from './recovery.ts';
+import { frame, shiftOn } from './plan.ts';
+import { avgEA, avgOf, readiness, totalSleep, trainingLoad, weightTrend } from './recovery.ts';
 import type { State } from './store.ts';
-import { diffDays, fmt, lastDays, mean, pearson, sd, toMin } from './util.ts';
+import { addDays, diffDays, fmt, fromMin, lastDays, mean, pearson, sd, toMin } from './util.ts';
 
 export type Level = 'urgent' | 'act' | 'watch' | 'good';
 export interface Finding { id: string; level: Level; title: string; seen: string; why: string; do: string[]; hormones?: string[]; link?: string }
@@ -19,8 +19,9 @@ const ORDER: Level[] = ['urgent', 'act', 'watch', 'good'];
 export function findings(s: State, link: Link, date: string): Finding[] {
   const out: Finding[] = [];
   const p = s.profile, id = s.phase.id;
-  const sleep = avgOf(s, link, date, 7, (d) => d.sleepH);
-  const sleepVals = lastDays(date, 7).map((d) => dayView(s, link, d).sleepH).filter((v): v is number => v != null);
+  const sleep = avgOf(s, link, date, 7, totalSleep);
+  const sleepVals = lastDays(date, 7).map((d) => totalSleep(dayView(s, link, d))).filter((v): v is number => v != null);
+  const f = frame(s, date), cafStop = fromMin(f.cafStop);
   const stress = avgOf(s, link, date, 7, (d) => d.stress);
   const ea = avgEA(s, link, date);
   const trend = weightTrend(s, link, date);
@@ -48,9 +49,18 @@ export function findings(s: State, link: Link, date: string): Finding[] {
 
   // Sleep is the strongest lever.
   if (sleep != null && sleepVals.length >= 3) {
-    if (sleep < 7) out.push({ id: 'sleep', level: sleep < 6 ? 'act' : 'watch', title: 'Somnul e frâna numărul 1', seen: `Media ultimelor zile: ${fmt(sleep, 1)} ore.`, why: 'Afectează testosteronul, foamea, insulina și masa musculară în același timp.', do: ['Mută culcarea cu 30 de minute mai devreme, 7 zile la rând.', 'Lumină slabă cu o oră înainte.', `Cafeina stop la ${caffeineCutoff(p)}.`], hormones: ['testosterone', 'gh', 'cortisol', 'ghrelin'], link: '#/recuperare' });
-    if (sd(sleepVals) > 1.25) out.push({ id: 'regular', level: 'watch', title: 'Somn neregulat', seen: `Variază cu ${fmt(sd(sleepVals), 1)} ore de la o noapte la alta.`, why: 'Regularitatea contează uneori mai mult decât durata.', do: ['Aceeași oră de trezire și în weekend.'], hormones: ['melatonin', 'cortisol'] });
+    if (sleep < 7) out.push({ id: 'sleep', level: sleep < 6 ? 'act' : 'watch', title: 'Somnul e frâna numărul 1', seen: `Media ultimelor zile: ${fmt(sleep, 1)} ore.`, why: 'Afectează testosteronul, foamea, insulina și masa musculară în același timp.', do: [f.shift === '3' || f.prev === '3' ? 'După schimb: ochelari de soare, cameră complet întunecată, telefon pe silențios.' : 'Mută culcarea cu 30 de minute mai devreme.', 'Lumină slabă cu o oră înainte.', `Ultima cafea la ${cafStop}.`], hormones: ['testosterone', 'gh', 'cortisol', 'ghrelin'], link: '#/recuperare' });
+    if (sd(sleepVals) > 1.5) out.push({ id: 'regular', level: 'watch', title: 'Somn foarte variabil', seen: `Variază cu ${fmt(sd(sleepVals), 1)} ore de la o zi la alta.`, why: 'Turele îl fac variabil, dar orele fixe pe fiecare schimb îl țin în frâu.', do: ['Respectă orele de culcare din protocol pentru fiecare schimb.'], hormones: ['melatonin', 'cortisol'] });
   }
+
+  // Shifts: what is coming matters as much as what happened.
+  const tomorrow = frame(s, addDays(date, 1));
+  if (f.quick || tomorrow.quick) { const q = f.quick ? f : tomorrow; out.push({ id: 'quick', level: 'watch', title: `Doar ${q.gap} ore între schimburi ${f.quick ? 'azi' : 'mâine'}`, seen: 'Din orarul tău.', why: 'Sub 11 ore pierzi somn, oricât ai încerca. Cercetătorii recomandă minimum 11.', do: ['Culcă-te imediat ce ajungi.', 'Fă un somn scurt după schimb.', 'Fără sesiune grea în ziua următoare.'], hormones: ['cortisol', 'testosterone'], link: '#/protocol' }); }
+  if (f.shift === '3' && f.nightN >= 4) out.push({ id: 'nights', level: 'watch', title: `Noaptea ${f.nightN} la rând`, seen: 'Din orarul tău.', why: 'Cercetătorii recomandă maximum 3 nopți la rând. Datoria de somn se adună.', do: ['Atenție la drumul spre casă.', 'Doar sesiuni ușoare dacă ai dormit sub 6 ore.'], hormones: ['cortisol', 'melatonin'], link: '#/protocol' });
+  if (shiftOn(s.roster, addDays(date, 1)) === '3' && f.shift !== '3') out.push({ id: 'nextnight', level: 'watch', title: 'Mâine începe noaptea', seen: 'Din orarul tău.', why: 'Prima noapte e cea mai grea: ajungi la ea după prea multe ore de veghe.', do: ['Stai treaz mai târziu diseară.', 'Mâine, somn de 2,5 ore după-amiază.'], hormones: ['orexin', 'melatonin'], link: '#/protocol' });
+
+  // The Beast Nutrition plan, read against what the hormones need. The plan stays there.
+  if (link.plan && link.plan.f < 0.6 * p.weightKg) out.push({ id: 'bnfat', level: 'watch', title: 'Puține grăsimi în planul din Beast Nutrition', seen: `${link.plan.f} g pe zi, adică ${fmt(link.plan.f / p.weightKg, 2)} g/kg.`, why: 'Dietele foarte sărace în grăsimi scad testosteronul.', do: ['Verifică macronutrienții în Beast Nutrition.'], hormones: ['testosterone'] });
 
   // Energy.
   if (id === 'cut') {
@@ -77,7 +87,10 @@ export function findings(s: State, link: Link, date: string): Finding[] {
   if (stress != null && stress >= 3.8) out.push({ id: 'stress', level: 'watch', title: 'Stres ridicat', seen: `Media: ${fmt(stress, 1)} din 5.`, why: 'Stresul continuu ține cortizolul sus seara și strică somnul.', do: ['5 minute de respirație de 2 ori pe zi.', '20 de minute în natură.', 'Reduci o sesiune intensă săptămâna asta.'], hormones: ['cortisol', 'adrenaline', 'crh'], link: '#/hormoni/cortisol' });
   if (alcohol >= 8) out.push({ id: 'alcohol', level: 'watch', title: 'Mult alcool săptămâna asta', seen: `${alcohol} unități în 7 zile.`, why: 'Scade somnul profund, sinteza proteică și, în exces, testosteronul.', do: ['Maximum 2 ocazii pe săptămână, niciodată în ziua de antrenament greu.'], hormones: ['testosterone', 'gh'] });
   const today = dayView(s, link, date);
-  if (today.lastCaffeine && toMin(today.lastCaffeine) > toMin(caffeineCutoff(p))) out.push({ id: 'caffeine', level: 'watch', title: 'Cafeină prea târziu', seen: `Ultima la ${today.lastCaffeine}.`, why: 'Cafeina luată cu 6 ore înainte de culcare a redus somnul, iar seara întârzie ceasul intern.', do: [`Limita ta e ${caffeineCutoff(p)}.`], hormones: ['melatonin'] });
+  if (today.lastCaffeine) {
+    const m = toMin(today.lastCaffeine), abs = m < f.wake ? m + 1440 : m;
+    if (abs > f.cafStop) out.push({ id: 'caffeine', level: 'watch', title: 'Cafeină prea târziu', seen: `Ultima la ${today.lastCaffeine}.`, why: 'Cafeina luată cu 6 ore înainte de culcare a redus somnul, iar seara întârzie ceasul intern.', do: [`Limita de azi e ${cafStop}.`], hormones: ['melatonin'] });
+  }
   if (today.bpS && today.bpD && (today.bpS >= 140 || today.bpD >= 90)) out.push({ id: 'bp', level: 'act', title: 'Tensiune crescută', seen: `${today.bpS}/${today.bpD} mmHg.`, why: 'Repetată, peste 140/90 înseamnă hipertensiune.', do: ['Măsoară 7 zile, dimineața și seara.', 'Mergi la medic dacă rămâne peste 140/90.'], hormones: ['aldosterone', 'angiotensin'] });
 
   // Symptoms repeated over two weeks.
@@ -116,12 +129,12 @@ export function phaseVerdict(s: State, link: Link, date: string): Verdict {
 export interface Corr { title: string; r: number; n: number; line: string }
 
 const PAIRS: { a: string; b: string; f: (d: ReturnType<typeof dayView>) => number | undefined; g: (d: ReturnType<typeof dayView>) => number | undefined; lag: number; up: string; down: string }[] = [
-  { a: 'somn', b: 'energie', f: (d) => d.sleepH, g: (d) => d.energy, lag: 0, up: 'Când dormi mai mult, ai mai multă energie.', down: 'Mai mult somn nu îți crește energia.' },
-  { a: 'somn', b: 'foame', f: (d) => d.sleepH, g: (d) => d.hunger, lag: 0, up: 'Mai mult somn vine cu mai multă foame.', down: 'Când dormi puțin, ți-e mai foame.' },
-  { a: 'stres', b: 'somn', f: (d) => d.stress, g: (d) => d.sleepH, lag: 1, up: 'Stresul nu îți scurtează somnul.', down: 'După zile stresante dormi mai puțin.' },
+  { a: 'somn', b: 'energie', f: totalSleep, g: (d) => d.energy, lag: 0, up: 'Când dormi mai mult, ai mai multă energie.', down: 'Mai mult somn nu îți crește energia.' },
+  { a: 'somn', b: 'foame', f: totalSleep, g: (d) => d.hunger, lag: 0, up: 'Mai mult somn vine cu mai multă foame.', down: 'Când dormi puțin, ți-e mai foame.' },
+  { a: 'stres', b: 'somn', f: (d) => d.stress, g: totalSleep, lag: 1, up: 'Stresul nu îți scurtează somnul.', down: 'După zile stresante dormi mai puțin.' },
   { a: 'alcool', b: 'HRV', f: (d) => d.alcohol, g: (d) => d.hrv, lag: 1, up: 'Alcoolul nu îți scade HRV-ul.', down: 'HRV-ul scade a doua zi după alcool.' },
   { a: 'antrenament', b: 'febră', f: (d) => (d.trainMin ? d.trainMin * (d.rpe ?? 5) : undefined), g: (d) => d.soreness, lag: 1, up: 'Sesiunile grele aduc febră a doua zi.', down: 'Sesiunile grele nu îți cresc febra.' },
-  { a: 'somn', b: 'disponibilitate', f: (d) => d.sleepH, g: (d) => d.hrv, lag: 0, up: 'Somnul mai lung îți crește HRV-ul.', down: 'Somnul mai lung nu îți crește HRV-ul.' },
+  { a: 'somn', b: 'disponibilitate', f: totalSleep, g: (d) => d.hrv, lag: 0, up: 'Somnul mai lung îți crește HRV-ul.', down: 'Somnul mai lung nu îți crește HRV-ul.' },
   { a: 'pași', b: 'energie', f: (d) => d.steps, g: (d) => d.energy, lag: 0, up: 'În zilele cu mai mulți pași ai mai multă energie.', down: 'În zilele cu mai mulți pași ești mai obosit.' },
 ];
 

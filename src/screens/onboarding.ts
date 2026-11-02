@@ -3,6 +3,7 @@ import type { PhaseId } from '../data/systems.ts';
 import { PHASE_FROM_NUTRITION } from '../logic/bridge.ts';
 import { ctx, actions, persist, render } from '../ui/ctx.ts';
 import { emblem, esc, plain } from '../ui/parts.ts';
+import { rotationPicker } from './protocol.ts';
 import { profileFields } from './settings.ts';
 
 let step = 0, seeded = false;
@@ -28,11 +29,11 @@ function seed() {
 
 export function onboarding(): string {
   seed();
-  const dots = `<p class="faint" style="text-align:center">Pasul ${step + 1} din 3</p>`;
+  const dots = `<p class="faint" style="text-align:center">Pasul ${step + 1} din 4</p>`;
   if (step === 0) return `<div class="onb"><div>
     <img class="logo" src="${emblem()}" alt="Emblema Beast Performance" width="680" height="801">
     <h1 style="text-align:center">Beast Performance</h1>
-    <p class="muted">Inner Beast îți dă disciplina. Beast Nutrition îți dă combustibilul. Aici le legi: hormoni, analize, recuperare și performanță, într-un singur protocol zilnic.</p>
+    <p class="muted">Antrenamentul rămâne în Inner Beast, mâncarea în Beast Nutrition. Aici le așezi în schimburile tale și urmărești hormonii, analizele și recuperarea.</p>
     <p class="muted">Nu trebuie să știi ce face fiecare hormon. Urmezi ziua, iar aplicația îți spune ce câștigi.</p>
     <div class="panel flat stack"><h3>Important</h3><p class="muted">${esc(DISCLAIMER)}</p><details><summary class="small" style="cursor:pointer">Semnale pentru care mergi direct la medic</summary>${plain(RED_FLAGS)}</details></div>
     <button class="btn go" data-act="onext">Am înțeles, mergem</button>
@@ -45,9 +46,16 @@ export function onboarding(): string {
     <div class="row"><button class="btn" data-act="oback">Înapoi</button><button class="btn go grow" data-act="onext">Continuă</button></div>
     ${dots}
   </div></div>`;
+  if (step === 2) return `<div class="onb"><div>
+    <h1>Cum lucrezi?</h1>
+    <p class="muted">Schimbul 1, 06:00–14:00. Schimbul 2, 14:00–22:00. Schimbul 3, 22:00–06:00. Din ele calculez somnul, lumina, cafeaua și ora antrenamentului.</p>
+    ${rotationPicker()}
+    <div class="row"><button class="btn" data-act="oback">Înapoi</button><button class="btn go grow" data-act="onext">Continuă</button></div>
+    ${dots}
+  </div></div>`;
   return `<div class="onb"><div>
     <h1>Despre tine</h1>
-    <p class="muted">${ctx.link.profile ? 'Am preluat ce știu aplicațiile tale. Verifică și completează.' : 'Din astea calculez caloriile și orele zilei.'}</p>
+    <p class="muted">${ctx.link.profile ? 'Am preluat ce știu aplicațiile tale. Verifică și completează.' : 'Din astea calculez reperele de performanță și orele zilei.'}</p>
     ${profileFields(ctx.s.profile)}
     <div class="row"><button class="btn" data-act="oback">Înapoi</button><button class="btn go grow" data-act="odone">Construiește protocolul</button></div>
     ${dots}

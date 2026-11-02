@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { BIOMARKER, BIOMARKERS } from '../data/biomarkers.ts';
 import { HORMONES, HORMONE } from '../data/hormones.ts';
-import { BENCH, BENCHES, DOMAINS, SESSIONS, SUPPS, WEEKS } from '../data/performance.ts';
+import { BENCH, BENCHES, DOMAINS, SUPPS } from '../data/performance.ts';
 import { PHASES } from '../data/phases.ts';
 import { REF } from '../data/refs.gen.ts';
+import { GUIDES, ROTATIONS, SHIFT_RISKS, SHIFT_STEPS } from '../data/shifts.ts';
 import { SYMPTOMS } from '../data/symptoms.ts';
 import { AXES, GLANDS, LEVERS, SYSTEMS } from '../data/systems.ts';
 import { searchKnowledge } from './ai.ts';
@@ -12,11 +13,12 @@ import { EMPTY_LINK, readLink } from './bridge.ts';
 import { demoDays, withDemo } from './demo.ts';
 import { correlations, findings, phaseVerdict } from './insights.ts';
 import { classify, homaIr, latest, parseReport, patterns, toBase } from './labs.ts';
-import { dayPlan, targets, timeline, weekSessions } from './plan.ts';
+import { audit, domainsOf } from './audit.ts';
+import { activeDate, afterNights, anchorOptions, bestBloodDay, frame, sessionsOn, setRotation, shiftOn, timeline, transition } from './plan.ts';
 import { avgEA, energyAvailability, exerciseKcal, readiness, trainingLoad, weightTrend } from './recovery.ts';
 import { benchScore, benchValue, domainStates, hormoneStates, leverScores, systemStates } from './score.ts';
-import { empty, normalize, parseBackup, backupText, type State } from './store.ts';
-import { addDays, pearson, toMin, weekday } from './util.ts';
+import { empty, normalize, parseBackup, backupText, type Roster, type State } from './store.ts';
+import { addDays, fromMin, pearson, toMin, weekday } from './util.ts';
 
 const TODAY = '2026-11-02';
 const base = (o: Partial<State> = {}): State => ({ ...empty(TODAY), ...o });
@@ -65,7 +67,9 @@ test('protocols, benchmarks and supplements cite real sources and real sessions'
   }
   for (const b of BENCHES) for (const r of b.refs ?? []) assert.ok(REF[r], r);
   for (const s of SUPPS) for (const r of s.refs) assert.ok(REF[r], r);
-  for (const w of Object.values(WEEKS)) for (const list of Object.values(w)) for (const id of list) assert.ok(SESSIONS[id], id);
+  for (const x of [...SHIFT_STEPS, ...SHIFT_RISKS]) for (const r of x.refs ?? []) assert.ok(REF[r], r);
+  assert.equal(GUIDES.length, 4);
+  for (const r of ROTATIONS) assert.ok(r.pattern.every((x) => ['1', '2', '3', 'L'].includes(x)));
   assert.equal(GLANDS.length > 10, true);
   for (const a of AXES) for (const g of a.path) assert.ok(GLANDS.some((x) => x.id === g), g);
   assert.equal(LEVERS.length, 12);
@@ -133,58 +137,159 @@ test('patterns read markers together', () => {
   assert.ok(patterns(muscle).some((p) => p.id === 'muscleliver'));
 });
 
-test('cut: the deficit follows the rate and stops at the energy floor', () => {
-  const s = base({ phase: { ...empty(TODAY).phase, id: 'cut', maintenance: 2800 }, profile: { ...empty(TODAY).profile, weightKg: 80, bf: 15 } });
-  const t = targets(s, EMPTY_LINK, TODAY);
-  assert.equal(t.kcal, 2185);
-  assert.ok(t.f >= 0.7 * 80);
-  assert.ok(t.p >= 2.3 * 68 && t.p <= 3.1 * 68);
-  const hard = { ...s, phase: { ...s.phase, rate: 2 } };
-  const floor = targets(hard, EMPTY_LINK, TODAY);
-  assert.ok(floor.kcal >= 2100);
-  assert.ok(floor.notes.some((n) => n.includes('limitat')));
+const MONDAY = '2026-11-02';
+/** Monday to Sunday, repeated, starting on MONDAY. */
+const roster = (...p: Roster['pattern']): Roster => ({ rotation: 'x', pattern: p, start: MONDAY, overrides: {}, set: true });
+const withRoster = (r: Roster, o: Partial<State> = {}) => base({ roster: r, ...o });
+
+test('the rotation repeats, in both directions of time, and a single day can be changed', () => {
+  const r = roster('1', '2', '3', 'L');
+  assert.equal(shiftOn(r, MONDAY), '1');
+  assert.equal(shiftOn(r, addDays(MONDAY, 6)), '3');
+  assert.equal(shiftOn(r, addDays(MONDAY, -1)), 'L');
+  assert.equal(shiftOn({ ...r, overrides: { [MONDAY]: 'L' } }, MONDAY), 'L');
+  assert.equal(shiftOn({ ...r, pattern: [] }, MONDAY), 'L');
 });
 
-test('lean bulk scales with experience; reverse climbs to maintenance and stops', () => {
-  const p = { ...empty(TODAY).profile, level: 'adv' as const };
-  const bulk = base({ profile: p, phase: { ...empty(TODAY).phase, id: 'bulk', maintenance: 3000 } });
-  assert.equal(targets(bulk, EMPTY_LINK, TODAY).kcal, 3150);
-  const rev = base({ phase: { ...empty(TODAY).phase, id: 'reverse', maintenance: 3000, start: addDays(TODAY, -70) } });
-  assert.equal(targets(rev, EMPTY_LINK, TODAY).kcal, 3000);
+test('picking where you are today lines the rotation up', () => {
+  const opts = anchorOptions('week-forward', MONDAY);
+  assert.equal(opts.length, 3);
+  const r = setRotation(empty(MONDAY).roster, 'week-forward', opts[2]!.index, MONDAY);
+  assert.equal(shiftOn(r, MONDAY), '3');
+  assert.equal(shiftOn(r, addDays(MONDAY, 5)), 'L');
+  assert.equal(shiftOn(r, addDays(MONDAY, 7)), '1');
+  const wed = '2026-11-04', q = setRotation(empty(wed).roster, 'week-forward', anchorOptions('week-forward', wed)[1]!.index, wed);
+  assert.equal(shiftOn(q, wed), '2');
+  assert.equal(shiftOn(q, '2026-11-07'), 'L');
+  assert.equal(anchorOptions('custom', MONDAY).length, 0);
 });
 
-test('a Beast Nutrition plan in the same phase wins; a different phase does not', () => {
-  const link = { ...EMPTY_LINK, plan: { phase: 'cut' as const, kcal: 2100, p: 180, c: 200, f: 65, maintenance: 2700, ratePct: 0.6, start: TODAY } };
-  const cut = base({ phase: { ...empty(TODAY).phase, id: 'cut' } });
-  assert.equal(targets(cut, link, TODAY).kcal, 2100);
-  assert.equal(targets(cut, link, TODAY).source, 'nutrition');
-  const bulk = base({ phase: { ...empty(TODAY).phase, id: 'bulk' } });
-  assert.equal(targets(bulk, link, TODAY).source, 'calc');
+test('shift 1: up before the commute, in bed early, enough sleep', () => {
+  const s = withRoster(roster('1'));
+  const f = frame(s, MONDAY);
+  assert.equal(f.wake, 360 - 30 - 40);
+  assert.equal(fromMin(f.wake), '04:50');
+  assert.equal(fromMin(f.bed), '21:05');
+  assert.ok(f.sleepMin >= 7.5 * 60);
+  assert.equal(f.meals[2], 885);
+  assert.equal(fromMin(f.cafStop), '12:05');
+  assert.ok(f.trainAt > 840);
+  assert.equal(f.quick, false);
 });
 
-test('the timeline runs from wake to sleep in order, across midnight', () => {
-  const s = base({ profile: { ...empty(TODAY).profile, wake: '06:30', bed: '22:30' } });
-  const items = timeline(s, EMPTY_LINK, TODAY);
-  assert.equal(items[0]?.id, 'wake');
+test('shift 2: trains in the morning and sleeps after work', () => {
+  const s = withRoster(roster('2'));
+  const f = frame(s, MONDAY);
+  assert.equal(fromMin(f.wake), '07:30');
+  assert.ok(f.trainAt < 840 - 180);
+  assert.ok(f.bed >= 1320 + 30);
+  assert.ok(f.cafStop >= 840 && f.cafStop <= 960);
+});
+
+test('shift 3: one cycle across midnight, nap before, sleep after, caffeine until 01:00', () => {
+  const s = withRoster(roster('3'));
+  const f = frame(s, MONDAY);
+  assert.equal(f.bed, 1440 + 360 + 30 + 30);
+  assert.equal(fromMin(f.bed), '07:00');
+  assert.equal(fromMin(f.wake), '14:30');
+  assert.equal(fromMin(f.cafStop), '01:00');
+  assert.equal(f.nap?.min, 90);
+  assert.ok(f.nap!.at + f.nap!.min < 1320);
+  assert.ok(f.trainAt + 75 < f.nap!.at);
+  const items = timeline(s, EMPTY_LINK, MONDAY);
+  const at = (id: string) => items.find((x) => x.id === id)?.min ?? -1;
+  assert.ok(at('work') < at('nightlight') && at('nightlight') < at('snack') && at('snack') < at('workend'));
+  assert.ok(at('shades') > at('workend'));
   assert.equal(items.at(-1)?.id, 'sleep');
-  assert.equal(items.at(-1)?.at, '22:30');
-  const late = base({ profile: { ...empty(TODAY).profile, wake: '09:00', bed: '01:00' } });
-  assert.equal(timeline(late, EMPTY_LINK, TODAY).at(-1)?.at, '01:00');
+  assert.equal(items.at(-1)?.tomorrow, true);
+  assert.equal(items[0]?.id, 'wake');
 });
 
-test('evening training drops the caffeine advice', () => {
-  const s = base({ profile: { ...empty(TODAY).profile, trainTime: '19:30', bed: '23:00', trainDays: [0, 1, 2, 3, 4, 5, 6] } });
-  assert.ok(timeline(s, EMPTY_LINK, TODAY).find((i) => i.id === 'caffeine')?.title.startsWith('Fără cafeină'));
+test('first night gets a long nap; nights are counted', () => {
+  const s = withRoster(roster('L', '3', '3', '3', '3', '3', 'L'));
+  const first = frame(s, addDays(MONDAY, 1));
+  assert.equal(first.nightN, 1);
+  assert.equal(first.nap?.min, 150);
+  assert.equal(transition(first)?.title, 'Prima noapte');
+  assert.equal(frame(s, addDays(MONDAY, 4)).nightN, 4);
+  assert.ok(transition(frame(s, addDays(MONDAY, 4)))?.title.includes('Noaptea 4'));
 });
 
-test('the week places hard sessions on training days only', () => {
-  const s = base({ profile: { ...empty(TODAY).profile, trainDays: [0, 2, 4, 6] } });
-  const w = weekSessions(s);
-  assert.equal(w.filter(Boolean).length, 4);
-  assert.equal(w[1], null);
-  const plan = dayPlan({ ...s }, { ...EMPTY_LINK, week: [[{ id: 'x', name: 'Heavy Bag', kind: 'rounds', min: 30 }], [], [], [], [], [], []] }, '2026-11-02');
-  assert.equal(weekday('2026-11-02'), 0);
-  assert.equal(plan.inner[0]?.name, 'Heavy Bag');
+test('the last night and the day after: short sleep, back to night sleep', () => {
+  const s = withRoster(roster('3', '3', 'L', 'L'));
+  assert.equal(transition(frame(s, addDays(MONDAY, 1)))?.title, 'Ultima noapte');
+  const off = frame(s, addDays(MONDAY, 2));
+  assert.equal(off.prev, '3');
+  assert.equal(off.sleepMin, 270);
+  assert.ok(off.bed < 1440);
+  assert.equal(transition(off)?.title, 'Zi de revenire');
+});
+
+test('short turnarounds are flagged with the real gap', () => {
+  const s = withRoster(roster('2', '1', 'L'));
+  const f = frame(s, addDays(MONDAY, 1));
+  assert.equal(f.gap, 8);
+  assert.equal(f.quick, true);
+  assert.ok(transition(f)?.title.includes('8 ore'));
+  assert.ok(f.sleepMin < 6 * 60);
+  assert.ok(findings(s, EMPTY_LINK, MONDAY).some((x) => x.id === 'quick'));
+  const fwd = frame(withRoster(roster('1', '2')), addDays(MONDAY, 1));
+  assert.equal(fwd.gap, 24);
+  assert.equal(fwd.quick, false);
+});
+
+test('during a night shift the running cycle is still yesterday', () => {
+  const s = withRoster(roster('3'));
+  assert.equal(activeDate(s, new Date('2026-11-03T03:00:00')), MONDAY);
+  assert.equal(activeDate(s, new Date('2026-11-03T06:30:00')), MONDAY);
+  assert.equal(activeDate(s, new Date('2026-11-03T08:00:00')), '2026-11-03');
+  const day = withRoster(roster('1'));
+  assert.equal(activeDate(day, new Date('2026-11-03T03:00:00')), '2026-11-03');
+});
+
+test('the Inner Beast session goes on the hour that fits, and its plan is never replaced', () => {
+  const link = { ...EMPTY_LINK, week: [[{ id: 'b', name: 'Heavy Bag Training', kind: 'rounds', min: 40, focus: 'power' }], [], [], [], [], [], []] };
+  const train = (s: State) => timeline(s, link, MONDAY).find((x) => x.id === 'train');
+  assert.ok(train(withRoster(roster('2')))?.title.includes('Heavy Bag'));
+  assert.equal(train(withRoster(roster('2')))?.min, frame(withRoster(roster('2')), MONDAY).trainAt);
+  assert.equal(timeline(withRoster(roster('2')), link, addDays(MONDAY, 1)).find((x) => x.id === 'train'), undefined);
+  // Without Inner Beast in this browser, the copy of its plan is used.
+  assert.equal(sessionsOn(EMPTY_LINK, MONDAY)[0]?.name, 'Shadow Boxing');
+});
+
+test('after short sleep a hard session is cut down, not cancelled', () => {
+  const s = withRoster(roster('2', '1'));
+  const link = { ...EMPTY_LINK, week: Array(7).fill([{ id: 'c', name: 'Calisthenics', kind: 'workout', min: 60 }]) };
+  assert.ok(timeline(s, link, addDays(MONDAY, 1)).find((x) => x.id === 'train')?.why.includes('taie din volum'));
+});
+
+test('the app carries no calories, macros or training template anywhere in the timeline', () => {
+  const s = withRoster(roster('1', '2', '3', 'L'));
+  for (let i = 0; i < 4; i++) for (const x of timeline(s, EMPTY_LINK, addDays(MONDAY, i))) assert.ok(!/\d+ ?(g|kcal)\b/.test(x.title), x.title);
+});
+
+test('blood draws wait for a clean morning', () => {
+  const s = withRoster(roster('3', '3', '3', '3', '3', 'L', 'L', '1', '1', '1', '1', '1', 'L', 'L', '2', '2', '2', '2', '2', 'L', 'L'));
+  const d = bestBloodDay(s, MONDAY)!;
+  assert.equal(d, addDays(MONDAY, 12));
+  assert.ok(afterNights(s, MONDAY));
+  assert.equal(afterNights(s, addDays(MONDAY, 12)), false);
+  const panel = { id: 'a', date: addDays(MONDAY, 5), lab: '', fasted: true, values: { tt: { v: 500, unit: 'ng/dL' } } };
+  assert.ok(patterns({ ...s, panels: [panel] }).some((p) => p.id === 'nights'));
+});
+
+test('the Inner Beast week is read per domain, without judging it as a whole', () => {
+  const rows = audit(EMPTY_LINK);
+  assert.equal(rows.find((x) => x.id === 'strength')?.sessions.includes('Calisthenics'), true);
+  assert.equal(rows.find((x) => x.id === 'mobility')?.level, 'good');
+  assert.ok((rows.find((x) => x.id === 'conditioning')?.min ?? 0) > 90);
+  assert.deepEqual(domainsOf({ id: 'x', name: 'Mobility', kind: 'routine', min: 30 }), ['mobility']);
+});
+
+test('the plan in Beast Nutrition is checked, not rewritten', () => {
+  const link = { ...EMPTY_LINK, plan: { phase: 'cut' as const, kcal: 2000, p: 170, c: 240, f: 40, maintenance: 2700, ratePct: 0.6, start: TODAY } };
+  assert.ok(findings(base(), link, TODAY).some((x) => x.id === 'bnfat'));
+  assert.equal(findings(base({ profile: { ...empty(TODAY).profile, weightKg: 60 } }), link, TODAY).some((x) => x.id === 'bnfat'), false);
 });
 
 test('readiness needs baseline days for HRV and reacts to bad nights', () => {
@@ -326,9 +431,12 @@ test('the knowledge search finds hormones, markers and symptoms', () => {
   assert.equal(searchKnowledge('cortizol')[0]?.href.includes('cortisol') || searchKnowledge('cortizol')[0]?.href.includes('cort'), true);
   assert.ok(searchKnowledge('foame constanta').some((h) => h.href === '#/jurnal/hunger'));
   assert.ok(searchKnowledge('viteza sprint').some((h) => h.href === '#/performanta/speed'));
+  assert.ok(searchKnowledge('schimb noapte somn').some((h) => h.href === '#/protocol'));
   assert.equal(searchKnowledge('').length, 0);
 });
 
 test('helpers', () => {
   assert.equal(toMin('07:30'), 450);
+  assert.equal(fromMin(1860), '07:00');
+  assert.equal(weekday(MONDAY), 0);
 });

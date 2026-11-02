@@ -200,6 +200,17 @@ details.fold[open] summary::after { content: '−'; }
 details.fold summary::-webkit-details-marker { display: none; }
 details.fold > div { padding: 0 14px 14px; }
 
+/* ---- Shifts ---- */
+.shiftbar { display: grid; grid-auto-flow: column; grid-auto-columns: 46px; gap: 3px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px; }
+.shiftbar::-webkit-scrollbar { display: none; }
+.sd { display: grid; gap: 3px; }
+.sd-day { min-height: 44px; background: var(--s2); color: var(--t3); font-size: 12px; font-weight: 600; line-height: 1.1; }
+.sd-day b { display: block; color: var(--t1); font: 700 16px/1.15 var(--display); }
+.sd.on .sd-day { background: var(--t1); color: #3c3f4d; }
+.sd.on .sd-day b { color: #0b0c12; }
+.sd-sh { min-height: 40px; font: 800 17px/1 var(--display); background: var(--s3); color: var(--t1); border-top: 2px solid var(--edge); }
+.sd-sh.s1 { border-top-color: #ffc65c; } .sd-sh.s2 { border-top-color: #6fb6ff; } .sd-sh.s3 { border-top-color: #ff3b2f; background: #2a1012; } .sd-sh.sL { color: var(--t3); border-top-color: var(--line); background: var(--s1); }
+
 /* ---- Week and year ---- */
 .week { display: grid; gap: 6px; }
 @media (min-width: 900px) { .week { grid-template-columns: repeat(7, 1fr); } }

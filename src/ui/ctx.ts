@@ -1,5 +1,5 @@
 /* The app's running state, shared by the screens. */
-import { readLink, EMPTY_LINK, type Link } from '../logic/bridge.ts';
+import { PHASE_FROM_NUTRITION, readLink, EMPTY_LINK, type Link } from '../logic/bridge.ts';
 import { load, save, type Day, type State } from '../logic/store.ts';
 import { dayKey } from '../logic/util.ts';
 
@@ -10,6 +10,13 @@ export const ctx: Ctx = { s: load(), link: EMPTY_LINK, today: dayKey() };
 export function refresh() {
   ctx.today = dayKey();
   try { ctx.link = readLink(localStorage); } catch { ctx.link = EMPTY_LINK; }
+  // The phase follows Beast Nutrition when it changes there. Lean bulk exists only here, so a hand-picked bulk survives until then.
+  const plan = ctx.link.plan, ph = ctx.s.phase;
+  if (plan && ph.synced !== plan.phase) {
+    const id = PHASE_FROM_NUTRITION[plan.phase];
+    ctx.s.phase = { ...ph, id, synced: plan.phase, start: plan.start || ph.start, history: ph.id === id ? ph.history : [...ph.history, { id: ph.id, start: ph.start, end: ctx.today }] };
+    persist();
+  }
 }
 
 let warned = false;

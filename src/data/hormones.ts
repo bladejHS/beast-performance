@@ -12,6 +12,8 @@ export interface Hormone {
   id: string; n: string; en: string; sys: SysId; gland: GlandId[]; dir: Dir;
   goal: string; what: string; gain: string[]; steps: Step[];
   phase: Partial<Record<PhaseId, string>>;
+  /** What rotating shifts change for this hormone. */
+  shift?: string;
   warn?: string; markers: string[]; levers: LeverId[];
 }
 
@@ -39,6 +41,7 @@ export const HORMONES: Hormone[] = [
       { t: 'Limitează alcoolul: consumul mare și repetat scade producția.', ev: 'B', refs: ['smith2023'] },
       { t: 'Evită deficitul extrem. Într-un caz de culturism natural a coborât de la 9,22 la 2,27 ng/mL la 4,5% grăsime și a revenit după ce a mâncat din nou.', ev: 'C', refs: ['rossow2013'] },
     ],
+    shift: 'Crește cât dormi, la orice oră, și scade cât ești treaz, deci somnul după schimb contează cât cel de noapte. La bărbații cu tulburare de somn din ture e în medie cu 100 ng/dL mai mic. Testează-l după minimum 2–3 zile fără noapte.',
     phase: {
       cut: 'Scade previzibil pe măsură ce devii foarte slab. Protejează-l cu somn, grăsimi peste prag și ritm de 0,5–0,7% pe săptămână.',
       reverse: 'Faza în care revine. Prioritate: mai multe calorii și somn. Testează după 6–8 săptămâni la menținere.',
@@ -127,6 +130,7 @@ export const HORMONES: Hormone[] = [
       { t: 'Postul crește GH, dar IGF-1 scade: nu e un câștig în sine.', ev: 'C', refs: ['ho1988'] },
       { t: 'Nu urmări vârful din sală și nu scurta pauzele pentru el: pauzele de 3 minute au dat mai multă forță și masă decât cele de 1 minut.', ev: 'B', refs: ['schoenfeld2016', 'morton2016'] },
     ],
+    shift: 'Pulsul mare vine cu somnul profund, oriunde ar fi el în zi, dar somnul de zi e mai scurt și mai fragmentat. Protejează-l.',
     phase: { cut: 'GH poate crește în post, dar IGF-1 scade: nu e un semn bun în sine.' },
     warn: 'Peptidele și secretagogii de GH sunt interzise în sport și nu au date de siguranță.', markers: ['igf1'], levers: ['sleep', 'strength', 'clean'] },
   { id: 'igf1', n: 'Factorul de creștere asemănător insulinei 1', en: 'IGF-1', sys: 'growth', gland: ['liver'], dir: 'range',
@@ -187,6 +191,7 @@ export const HORMONES: Hormone[] = [
       { t: 'Folosește refeed-uri: 2 zile de mâncare în plus au ridicat FT3 cu 18,5% la un culturist natural.', ev: 'C', refs: ['ritson2024'] },
       { t: 'Fă pauze de dietă dacă slăbești mult: au păstrat mai bine metabolismul de repaus, mai ales la persoanele supraponderale.', ev: 'B', refs: ['dietbreak2025', 'byrne2018'] },
     ],
+    shift: 'Somnul fragmentat și dieta se adună. În cut, pe schimbul 3, evită să scazi și mai mult mâncarea.',
     phase: { cut: 'Scade cu deficitul. Pe la săptămâna 8–12 ia în calcul o pauză de dietă.', reverse: 'Revine în primele săptămâni de calorii mai multe.' },
     warn: 'Nu lua hormoni tiroidieni pentru slăbit: cresc pierderea de mușchi și riscul cardiac.', markers: ['ft3'], levers: ['energy', 'micro'] },
   { id: 'calcitonin', n: 'Calcitonină', en: 'Calcitonin', sys: 'thyroid', gland: ['thyroid'], dir: 'leave',
@@ -209,6 +214,7 @@ export const HORMONES: Hormone[] = [
       { t: 'În sesiunile lungi, ia carbohidrați cu aminoacizi: suprimă creșterea cortizolului și scad degradarea proteică.', ev: 'B', refs: ['bird2006'] },
       { t: 'Dacă treci la low-carb, primele 3 săptămâni cresc cortizolul. Nu începe low-carb în perioade grele.', ev: 'B', refs: ['whittaker2022'] },
     ],
+    shift: 'Pe noapte, ritmul se aplatizează: mai mic când lucrezi, mai mare la culcare. Nu testa cortizolul după schimbul 3.',
     phase: {
       cut: 'Deficitul îl ridică ușor. Plimbări, somn, fără cardio intens în plus.',
       reverse: 'Coboară pe măsură ce crește mâncarea.',
@@ -226,6 +232,7 @@ export const HORMONES: Hormone[] = [
       { t: 'Cafeina înainte de sesiunile importante, maximum 200 mg o dată și 400 mg pe zi.', ev: 'A', refs: ['guest2021', 'efsa-caffeine'] },
       { t: 'Respirația Wim Hof din Inner Beast crește voluntar adrenalina. Doar pe uscat, niciodată în apă.', ev: 'B', refs: ['kox2014'] },
     ],
+    shift: 'Pe noapte, lumina și mișcarea te țin treaz mai sănătos decât a treia cafea.',
     phase: { cut: 'Rămâne crescută în repaus dacă dietezi agresiv: apar neliniște și somn prost.' },
     markers: [], levers: ['strength', 'calm', 'clean'] },
   { id: 'noradrenaline', n: 'Noradrenalină', en: 'Norepinephrine', sys: 'stress', gland: ['adrenal'], dir: 'pulse',
@@ -267,6 +274,7 @@ export const HORMONES: Hormone[] = [
       { t: 'Începe masa cu legume și proteine, carbohidrații la final: glicemia și insulina cresc mai puțin.', ev: 'B', refs: ['shukla2015'] },
       { t: 'Ajunge la 25–30 g de fibre pe zi.', ev: 'A', refs: ['reynolds2019'] },
     ],
+    shift: 'Noaptea, aceeași masă ridică glicemia mai mult. Mesele mari între 00:00 și 05:00 sunt cele mai scumpe.',
     phase: { cut: 'Sensibilitatea crește pe măsură ce slăbești.', bulk: 'Urmărește talia și glicemia. Dacă talia crește rapid, surplusul e prea mare.', reverse: 'Carbohidrații în jurul antrenamentului.' },
     markers: ['ins', 'glu', 'a1c', 'homa'], levers: ['strength', 'cardio', 'sleep', 'fiber'] },
   { id: 'glucagon', n: 'Glucagon', en: 'Glucagon', sys: 'metabolic', gland: ['pancreas'], dir: 'leave',
@@ -318,6 +326,7 @@ export const HORMONES: Hormone[] = [
       { t: 'Refeed cu carbohidrați, nu cu grăsimi: într-un studiu pe femei, 3 zile de exces din carbohidrați au crescut leptina cu 28%; excesul din grăsimi nu.', ev: 'C', refs: ['dirlewanger2000'] },
       { t: 'Somn: 2 nopți cu 4 ore au scăzut leptina cu 18%.', ev: 'B', refs: ['spiegel2004'] },
     ],
+    shift: 'Dormitul și mâncatul în contra ceasului intern au scăzut-o cu 17%. De aceea îți e mai foame pe ture.',
     phase: { cut: 'Scade rapid. De aceea dieta devine mai grea după câteva săptămâni.', reverse: 'Revine odată cu mâncarea și grăsimea.' }, markers: ['leptin'], levers: ['energy', 'sleep'] },
   { id: 'ghrelin', n: 'Grelină', en: 'Ghrelin', sys: 'appetite', gland: ['stomach'], dir: 'rhythm',
     goal: 'Foame la orele de masă, nu toată ziua.',
@@ -328,6 +337,7 @@ export const HORMONES: Hormone[] = [
       { t: 'Mese la ore regulate, cu proteine: 30–40 g.', ev: 'B', refs: ['cummings2007'] },
       { t: 'Alege alimente reale. Dieta ultraprocesată a crescut aportul cu aproximativ 500 kcal pe zi.', ev: 'B', refs: ['hall2019'] },
     ],
+    shift: 'Foamea se mută cu programul. Mesele la ore fixe pentru fiecare schimb o țin în frâu.',
     phase: { cut: 'Crește normal în dietă. O pauză de dietă a redus foamea, chiar fără efect pe alți hormoni.', reverse: 'Foamea scade pe măsură ce crești caloriile.' }, markers: [], levers: ['sleep', 'protein', 'fiber'] },
   { id: 'pyy', n: 'Peptidă YY', en: 'PYY', sys: 'appetite', gland: ['gut'], dir: 'up',
     goal: 'Răspuns bun după masă.',
@@ -352,6 +362,7 @@ export const HORMONES: Hormone[] = [
       { t: 'Aceeași oră de trezire și mișcare dimineața.', ev: 'C', refs: ['sakurai2007'] },
       { t: 'Mic dejun cu proteine: aminoacizii activează neuronii de orexină, iar glucoza îi frânează.', ev: 'C', refs: ['karnani2011'] },
     ],
+    shift: 'Ține alerta pe tură de noapte, dar scade dacă dormi prea puțin înainte. Somnul de dinainte de schimb o ajută.',
     phase: {}, markers: [], levers: ['sleep', 'protein', 'light'] },
 
   // ---- 7. Sleep ----
@@ -365,6 +376,7 @@ export const HORMONES: Hormone[] = [
       { t: 'Soare dimineața: o săptămână cu lumină naturală a aliniat ceasul intern la ora apusului.', ev: 'B', refs: ['wright2013'] },
       { t: 'Fără cafeină seara: echivalentul unui espresso dublu cu 3 ore înainte de somn a întârziat ceasul cu circa 40 de minute.', ev: 'B', refs: ['burke2013'] },
     ],
+    shift: 'Lumina de noapte o oprește. Ochelarii de soare după schimb și camera complet întunecată o lasă să pornească la somnul de zi.',
     phase: {},
     warn: 'Suplimentele variază enorm: conținutul real a fost între −83% și +478% față de etichetă. Dacă folosești, doze mici, pe termen scurt.', markers: [], levers: ['light', 'clean', 'sleep'] },
   { id: 'prolactin', n: 'Prolactină', en: 'Prolactin', sys: 'sleep', gland: ['pituitary'], dir: 'range',
@@ -396,6 +408,7 @@ export const HORMONES: Hormone[] = [
       { t: 'Evită lemnul-dulce în cantități mari: imită aldosteronul și urcă tensiunea.', ev: 'B' },
       { t: 'Dacă ai hipertensiune, întreabă medicul de raportul aldosteron/renină. Ghidul din 2025 sugerează screening pentru toți hipertensivii.', ev: 'A', refs: ['adler2025'] },
     ],
+    shift: 'Dezalinierea crește tensiunea pe 24 de ore. Măsoară tensiunea acasă, mai ales în săptămânile de noapte.',
     phase: { cut: 'Reducerea bruscă a sării reține apă după ce o reiei: schimbă treptat.' }, markers: ['aldo', 'k', 'na'], levers: ['water'] },
   { id: 'angiotensin', n: 'Angiotensină II', en: 'Angiotensin II', sys: 'fluid', gland: ['kidney', 'liver'], dir: 'down',
     goal: 'Scăzută în repaus: vase relaxate.',

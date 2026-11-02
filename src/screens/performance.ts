@@ -1,8 +1,10 @@
-import { BENCHES, DOMAIN, DOMAINS, YEAR, type Bench, type DomainId } from '../data/performance.ts';
+import { BENCHES, DOMAIN, type Bench, type DomainId } from '../data/performance.ts';
 import { PHASE } from '../data/phases.ts';
-import { dayPlan, weekSessions } from '../logic/plan.ts';
+import { SHIFT } from '../data/shifts.ts';
+import { audit } from '../logic/audit.ts';
+import { frame, isHard, sessionsOn, shiftOn } from '../logic/plan.ts';
 import { benchLevel, benchScore, benchTargets, benchValue, domainStates, nextFocus, scoreStatus } from '../logic/score.ts';
-import { DAYS, addDays, fmtVal, num, shortDate, uid, weekday } from '../logic/util.ts';
+import { DAYS, addDays, fmtVal, fromMin, num, shortDate, uid, weekday } from '../logic/util.ts';
 import { ctx, actions, persist, render, toast } from '../ui/ctx.ts';
 import { back, esc, ev, cites, head, lineChart, meter, plain, status, steps } from '../ui/parts.ts';
 
@@ -13,21 +15,15 @@ actions['test'] = (el) => {
   persist(); render.now(); toast('Test salvat');
 };
 
+/** The next seven days: the shift of the day, the Inner Beast session, and the hour that fits. */
 function week(): string {
   const { s, link, today } = ctx;
-  const list = weekSessions(s), wd = weekday(today);
-  return `<div class="week">${DAYS.map((d, i) => {
-    const own = list[i], date = addDays(today, i - wd), inner = dayPlan(s, link, date).inner;
-    return `<div class="dayc ${own?.hard ? 'hard' : own ? 'easy' : ''} ${i === wd ? 'today' : ''}"><small>${d}</small><b>${esc(own?.n ?? 'Odihnă și mobilitate')}</b>${inner.length ? `<small>Inner Beast: ${esc(inner.map((x) => x.name).join(', '))}</small>` : ''}</div>`;
-  }).join('')}</div>`;
-}
-
-function year(): string {
-  const total = YEAR.reduce((a, b) => a + b.weeks, 0);
-  const cur = ctx.s.phase.id;
-  const nowIdx = YEAR.findIndex((y) => y.phase === cur);
-  return `<div class="year" role="img" aria-label="Exemplu de an în ${YEAR.length} blocuri">${YEAR.map((y, i) => `<div class="${y.phase} ${i === nowIdx ? 'now' : ''}" style="flex:${y.weeks / total}" title="${esc(y.n)}"></div>`).join('')}</div>
-  <ul class="yearkey" style="margin-top:6px">${YEAR.map((y) => `<li><span>${esc(y.n)} <span class="faint">(${esc(PHASE[y.phase].n)})</span></span><span class="faint tab">${y.weeks} săpt.</span></li>`).join('')}</ul>`;
+  const rows = Array.from({ length: 7 }, (_, i) => addDays(today, i)).map((d) => {
+    const f = frame(s, d), sh = SHIFT[shiftOn(s.roster, d)], list = sessionsOn(link, d), hard = list.filter(isHard).length > 0;
+    const warn = hard && f.sleepMin < 360 ? 'Somn puțin înainte: taie din volum.' : hard && f.prev === '3' && f.shift === 'L' ? 'Zi de revenire: mai ușor.' : '';
+    return `<div class="dayc ${hard ? 'hard' : 'easy'} ${d === today ? 'today' : ''}"><small>${DAYS[weekday(d)]}, ${esc(sh.short)}</small><b>${list.length ? `${fromMin(f.trainAt)}, ${esc(list.map((x) => x.name).join(', '))}` : 'Liber'}</b>${warn ? `<small>${esc(warn)}</small>` : ''}</div>`;
+  });
+  return `<div class="week">${rows.join('')}</div>`;
 }
 
 function benchRow(b: Bench): string {
@@ -47,10 +43,13 @@ function benchRow(b: Bench): string {
   </li>`;
 }
 
+const COVER = { good: ['good', 'Acoperit'], watch: ['watch', 'Parțial'], act: ['act', 'Lipsește'], none: ['none', 'Nu se aplică'] } as const;
+
 function domainPage(id: DomainId): string {
   const d = DOMAIN[id], { s, link, today } = ctx, state = domainStates(s, link, today).find((x) => x.id === id)!;
   const phaseNote = d.phase[s.phase.id];
   const tests = d.tests.map((t) => BENCHES.find((b) => b.id === t)!).filter(Boolean);
+  const cover = audit(link).find((c) => c.id === id);
   return `
   ${back('#/performanta', 'Performanță')}
   <h1>${esc(d.n)}</h1>
@@ -59,29 +58,28 @@ function domainPage(id: DomainId): string {
     <div class="between"><h3>Ținta</h3>${state.score != null ? status(scoreStatus(state.score), `${state.score}/100`) : status('none', 'Fără teste')}</div>
     <p>${esc(d.target)}</p>
   </section>
-  <section class="fields" style="grid-template-columns:1fr">
-    <div class="panel flat stack"><h3>Doza de progres</h3><p class="muted">${esc(d.dose)}</p></div>
-    <div class="panel flat stack"><h3>Doza de menținere</h3><p class="muted">${esc(d.keep)}</p></div>
-    ${phaseNote ? `<div class="panel flat stack"><h3>În ${esc(PHASE[s.phase.id].n)}</h3><p class="muted">${esc(phaseNote)}</p></div>` : ''}
-  </section>
-  <section><h2>Protocolul</h2>${steps(d.steps)}</section>
-  <section><h2>Greșeli de evitat</h2>${plain(d.mistakes)}</section>
-  <section><h2>Cum măsori</h2><ul>${tests.map(benchRow).join('')}</ul></section>`;
+  ${cover ? `<section class="panel stack"><div class="between"><h3>În planul Inner Beast</h3>${status(COVER[cover.level][0], COVER[cover.level][1])}</div><p class="muted">${esc(cover.note)}</p>${cover.sessions.length ? `<p class="faint">${cover.min} de minute pe săptămână: ${esc(cover.sessions.join(', '))}.</p>` : ''}</section>` : ''}
+  ${phaseNote ? `<section class="panel flat stack"><h3>În ${esc(PHASE[s.phase.id].n)}</h3><p class="muted">${esc(phaseNote)}</p></section>` : ''}
+  <section><h2>Cum măsori</h2><ul>${tests.map(benchRow).join('')}</ul></section>
+  <section>
+    <h2>Ce spun studiile</h2>
+    <p class="muted" style="margin-bottom:6px">Pentru verificarea planului, nu un plan în plus.</p>
+    <details class="fold"><summary>Doza dovedită</summary><div class="stack"><p class="muted">${esc(d.dose)}</p><p class="muted"><b style="color:var(--t1)">Minimul ca să nu pierzi:</b> ${esc(d.keep)}</p></div></details>
+    <details class="fold"><summary>Studiile</summary><div>${steps(d.steps)}</div></details>
+    <details class="fold"><summary>Greșeli de evitat</summary><div>${plain(d.mistakes)}</div></details>
+  </section>`;
 }
 
 export function performance(param?: string): string {
   if (param && DOMAIN[param as DomainId]) return domainPage(param as DomainId);
   const { s, link, today } = ctx;
-  const states = domainStates(s, link, today), focus = nextFocus(states);
-  const list = weekSessions(s).filter(Boolean);
-  const hard = list.filter((x) => x?.hard).length;
-  const coverage = DOMAINS.map((d) => ({ d, n: list.filter((x) => x?.domains.includes(d.id)).length }));
+  const states = domainStates(s, link, today), focus = nextFocus(states), cov = audit(link);
   return `
-  ${head('performance', 'Performance Protocols', 'Definire, forță, motor, viteză, recuperare, sănătate.')}
+  ${head('performance', 'Performance Protocols', 'Unde ești, ce acoperă planul tău, ce lipsește.')}
   <section class="panel stack">
     <h2>Regula care face totul posibil</h2>
-    <p class="muted">Nimeni nu e la vârf în toate în aceeași zi. Lucrezi în blocuri: unul sau două domenii primesc doza de progres, restul doza de menținere. Testele îți arată ce urmează.</p>
-    ${focus ? `<p><b>Veriga slabă acum: ${esc(focus.n)}</b>, ${focus.score}/100. <a href="#/performanta/${focus.id}" style="text-decoration:underline">Deschide protocolul</a>.</p>` : '<p class="faint">Introdu rezultate la cel puțin 3 domenii și aplicația îți spune veriga slabă.</p>'}
+    <p class="muted">Nimeni nu e la vârf în toate în aceeași zi. Lucrezi în blocuri: un domeniu urcă, restul se mențin. Testele îți arată ce urmează.</p>
+    ${focus ? `<p><b>Veriga slabă acum: ${esc(focus.n)}</b>, ${focus.score}/100. <a href="#/performanta/${focus.id}" style="text-decoration:underline">Deschide</a>.</p>` : '<p class="faint">Introdu rezultate la cel puțin 3 domenii și aplicația îți spune veriga slabă.</p>'}
   </section>
   <section>
     <h2>Domeniile tale</h2>
@@ -89,11 +87,14 @@ export function performance(param?: string): string {
     <p class="faint" style="margin-top:6px">Reperele pentru sprint, sărituri și 5 km sunt repere de antrenor, nu norme științifice. Progresul față de tine contează mai mult.</p>
   </section>
   <section>
-    <div class="between"><h2>Săptămâna ta, ${esc(PHASE[s.phase.id].n)}</h2><span class="faint">${hard} sesiuni grele</span></div>
+    <h2>Săptămâna ta: schimburi și Inner Beast</h2>
+    <p class="muted" style="margin-bottom:8px">Planul rămâne în Inner Beast. Aici e ora la care intră în schimbul fiecărei zile.</p>
     ${week()}
-    <p class="faint" style="margin-top:6px">Roșu înseamnă greu, albastru ușor. Se aranjează după zilele alese în Setări.</p>
-    <details class="fold" style="margin-top:8px"><summary>Toate sesiunile, în detaliu</summary><div class="stack">${[...new Map(list.map((x) => [x!.id, x!])).values()].map((x) => `<div><h3>${esc(x.n)}, ${x.min} minute</h3><p class="muted small">${esc(x.line)}</p>${plain(x.blocks)}</div>`).join('')}</div></details>
-    <details class="fold"><summary>Ce domenii acoperă săptămâna</summary><div><ul class="yearkey">${coverage.map((c) => `<li><span>${esc(c.d.n)}</span><span class="faint">${c.n ? `${c.n} sesiuni` : 'zilnic, prin protocol'}</span></li>`).join('')}</ul></div></details>
+    ${link.week ? '' : '<p class="faint" style="margin-top:6px">Folosesc copia planului. Deschide Inner Beast în acest browser ca să văd alegerile tale.</p>'}
   </section>
-  <section><h2>Un an întreg</h2><p class="muted" style="margin-bottom:8px">Exemplu de ordine, ca fiecare domeniu să-și primească blocul.</p>${year()}</section>`;
+  <section>
+    <h2>Ce acoperă planul din Inner Beast</h2>
+    <ul class="rows">${cov.map((c) => `<li><a class="rowa" href="#/performanta/${c.id}"><span class="grow"><b>${esc(DOMAIN[c.id].n)}</b><small>${esc(c.note)}</small></span>${status(COVER[c.level][0], COVER[c.level][1])}</a></li>`).join('')}</ul>
+    <p class="faint" style="margin-top:6px">Verificare după tipul sesiunilor, nu o judecată a programului.</p>
+  </section>`;
 }

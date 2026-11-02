@@ -13,11 +13,15 @@ const scale = (v: number) => clamp((v - 1) * 25, 0, 100);
 
 const WEIGHT: Record<string, number> = { sleep: 0.3, hrv: 0.3, rhr: 0.15, stress: 0.1, soreness: 0.1, energy: 0.05 };
 
+/** Night workers sleep in pieces, so the nap counts. */
+export const totalSleep = (d: Day) => (d.sleepH != null ? d.sleepH + (d.napMin ?? 0) / 60 : undefined);
+
 export function readiness(s: State, link: Link, date: string): Readiness | null {
   const day = dayView(s, link, date);
   const past = lastDays(date, 29).slice(0, -1).map((d) => dayView(s, link, d));
   const parts: Part[] = [];
-  if (day.sleepH != null) parts.push({ k: 'sleep', n: 'Somn', value: `${day.sleepH.toFixed(1).replace('.', ',')} h`, score: sleepScore(day.sleepH) });
+  const hours = totalSleep(day);
+  if (hours != null) parts.push({ k: 'sleep', n: 'Somn', value: `${hours.toFixed(1).replace('.', ',')} h`, score: sleepScore(hours) });
   if (day.hrv) {
     const hist = past.map((d) => d.hrv).filter((v): v is number => !!v).map(Math.log);
     if (hist.length >= 5) {

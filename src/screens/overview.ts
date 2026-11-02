@@ -1,10 +1,11 @@
 import { PHASE } from '../data/phases.ts';
 import { findings } from '../logic/insights.ts';
 import { statusCounts } from '../logic/labs.ts';
-import { targets } from '../logic/plan.ts';
-import { avgEA, avgOf, readiness, series, weightTrend, ZONE } from '../logic/recovery.ts';
+import { activeDate, frame, phaseWeek, transition } from '../logic/plan.ts';
+import { avgEA, avgOf, readiness, series, totalSleep, weightTrend, ZONE } from '../logic/recovery.ts';
 import { balance, domainStates, hormoneStates, scoreStatus, systemStates } from '../logic/score.ts';
-import { fmt, dateLabel } from '../logic/util.ts';
+import { SHIFT } from '../data/shifts.ts';
+import { fmt, dateLabel, fromMin } from '../logic/util.ts';
 import { ctx } from '../ui/ctx.ts';
 import { emblem, empty, esc, meter, ring, spark, status } from '../ui/parts.ts';
 
@@ -15,10 +16,10 @@ export function overview(): string {
   const { s, link, today } = ctx;
   const states = hormoneStates(s, link, today);
   const sys = systemStates(states);
-  const tg = targets(s, link, today);
+  const f = frame(s, activeDate(s)), note = transition(f);
   const fs = findings(s, link, today).slice(0, 3);
   const r = readiness(s, link, today);
-  const sleep = avgOf(s, link, today, 7, (d) => d.sleepH);
+  const sleep = avgOf(s, link, today, 7, totalSleep);
   const trend = weightTrend(s, link, today);
   const ea = avgEA(s, link, today);
   const bal = balance(s, link, today);
@@ -41,7 +42,9 @@ export function overview(): string {
     <div class="stack">
       <p class="muted">${esc(dateLabel(today))}</p>
       <h1>Health Overview</h1>
-      <p class="muted"><b style="color:var(--t1)">${esc(PHASE[s.phase.id].n)}, săptămâna ${tg.week}.</b> ${esc(PHASE[s.phase.id].line)}</p>
+      <p class="muted"><b style="color:var(--t1)">${s.roster.set ? `${esc(SHIFT[f.shift].n)}${f.shift === 'L' ? '' : `, ${SHIFT[f.shift].label}`}.` : 'Setează schimburile în protocol.'}</b> ${s.roster.set ? `Trezire ${fromMin(f.wake)}, somn ${fromMin(f.bed)}, ultima cafea ${fromMin(f.cafStop)}.` : ''}</p>
+      <p class="muted">${esc(PHASE[s.phase.id].n)}, săptămâna ${phaseWeek(s, today)}.</p>
+      ${note ? `<div class="panel stack">${status(note.level)}<h3>${esc(note.title)}</h3><p class="muted small">${esc(note.body)}</p></div>` : ''}
       <section>
         <h2>Ce contează azi</h2>
         ${fs.length ? `<ol class="prio">${fs.map((f) => `<li><a class="panel" href="${f.link ?? '#/ai'}" style="display:block">${status(LEVEL[f.level], f.level === 'urgent' ? 'Acum' : f.level === 'act' ? 'Prioritar' : f.level === 'watch' ? 'De urmărit' : 'În regulă')}<div class="ttl">${esc(f.title)}</div><div class="faint">${esc(f.do[0] ?? f.seen)}</div></a></li>`).join('')}</ol>` : empty('Începe cu primul check-in', 'Două minute dimineața: somn, stres, energie. Din ele apar prioritățile.', '#/jurnal', 'Fă check-in')}
@@ -56,9 +59,9 @@ export function overview(): string {
 
   <section class="stats" aria-label="Valori cheie">
     ${stat('Disponibilitate azi', r ? String(r.score) : '–', r ? ZONE[r.zone].n : 'Fără check-in', sparkOf((d) => d.hrv, 'var(--sky)'), '#/recuperare')}
-    ${stat('Somn, media pe 7 zile', sleep != null ? `${fmt(sleep, 1)} h` : '–', sleep != null && sleep < 7.5 ? 'Ținta: 7,5–9 ore' : 'Ținta: 7,5–9 ore', sparkOf((d) => d.sleepH), '#/recuperare')}
+    ${stat('Somn, media pe 7 zile', sleep != null ? `${fmt(sleep, 1)} h` : '–', sleep != null && sleep < 7.5 ? 'Ținta: 7,5–9 ore' : 'Ținta: 7,5–9 ore', sparkOf(totalSleep), '#/recuperare')}
     ${stat('Greutate', trend ? `${fmt(trend.avg, 1)} kg` : '–', trend?.pct != null ? `${trend.pct > 0 ? '+' : ''}${fmt(trend.pct, 2)}% pe săptămână` : 'Media pe 7 zile', sparkOf((d) => d.weight), '#/recuperare')}
-    ${stat('Energie disponibilă', ea != null ? fmt(ea, 0) : '–', ea != null ? 'kcal/kg masă slabă' : 'Necesită calorii', '', '#/protocol')}
+    ${stat('Energie disponibilă', ea != null ? fmt(ea, 0) : '–', ea != null ? 'kcal/kg masă slabă' : 'Din Beast Nutrition', '', '#/ai')}
   </section>
 
   <div class="two">

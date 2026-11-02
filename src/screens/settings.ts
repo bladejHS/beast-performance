@@ -2,9 +2,10 @@ import { DISCLAIMER } from '../data/phases.ts';
 import { REFS } from '../data/refs.gen.ts';
 import { withDemo, withoutDemo } from '../logic/demo.ts';
 import { backupText, empty as emptyState, parseBackup, type Level, type Profile, type Sex } from '../logic/store.ts';
-import { DAYS, num } from '../logic/util.ts';
+import { num } from '../logic/util.ts';
 import { ctx, actions, persist, render, toast } from '../ui/ctx.ts';
 import { esc, head } from '../ui/parts.ts';
+import { rotationPicker } from './protocol.ts';
 
 actions['pf'] = (el) => {
   const input = el as HTMLInputElement, k = input.dataset['k'] as keyof Profile, p = ctx.s.profile as unknown as Record<string, unknown>;
@@ -13,14 +14,6 @@ actions['pf'] = (el) => {
   if (k === 'bf') p[k] = v;
   else if (v != null && v !== '') p[k] = v;
   persist(); toast('Salvat');
-};
-
-actions['tday'] = (el) => {
-  const i = Number(el.dataset['i']), set = new Set(ctx.s.profile.trainDays);
-  if (set.has(i)) set.delete(i); else set.add(i);
-  if (set.size < 2) { toast('Alege cel puțin 2 zile.'); return; }
-  ctx.s.profile.trainDays = [...set].sort((a, b) => a - b);
-  persist(); render.now();
 };
 
 actions['savekey'] = () => {
@@ -72,22 +65,21 @@ export const profileFields = (p: Profile) => `
     ${f('weightKg', 'Greutate, kg', p.weightKg)}
     ${f('bf', 'Grăsime corporală, %', p.bf)}
     ${sel('level', 'Experiență', p.level as Level, [['new', 'Începător'], ['mid', 'Intermediar'], ['adv', 'Avansat']])}
-    ${f('wake', 'Trezire', p.wake, 'time')}
-    ${f('bed', 'Culcare', p.bed, 'time')}
-    ${f('trainTime', 'Ora de antrenament', p.trainTime, 'time')}
-    ${f('activity', 'Activitate, 1,2–1,9', p.activity)}
-  </div>
-  <div class="field" style="margin-top:10px"><span>Zile de antrenament</span><div class="daypick" role="group" aria-label="Zile de antrenament">${DAYS.map((d, i) => `<button data-act="tday" data-i="${i}" aria-pressed="${p.trainDays.includes(i)}">${d.slice(0, 2)}</button>`).join('')}</div></div>`;
+    ${f('commuteMin', 'Drum până la muncă, minute', p.commuteMin)}
+    ${f('sleepNeed', 'Somn dorit, ore', p.sleepNeed)}
+    ${sel('chronotype', 'Tipul tău', p.chronotype, [['early', 'Matinal'], ['mid', 'Intermediar'], ['late', 'Nocturn']])}
+  </div>`;
 
 export function settings(): string {
   const { s, link } = ctx;
   const conn = (ok: boolean, n: string, line: string) => `<li class="between" style="padding:8px 0"><span>${esc(n)}<span class="faint" style="display:block">${esc(line)}</span></span><span class="st ${ok ? 'st-good' : 'st-none'}"><i>${ok ? '●' : '○'}</i>${ok ? 'Conectat' : 'Fără date'}</span></li>`;
   return `
   ${head('overview', 'Setări', 'Profil, legături, date.')}
-  <section class="panel"><h2>Profil și program</h2>${profileFields(s.profile)}</section>
+  <section class="panel stack"><h2>Schimburi</h2>${rotationPicker()}<a class="btn" href="#/protocol">Vezi banda de zile</a></section>
+  <section class="panel"><h2>Profil</h2>${profileFields(s.profile)}</section>
   <section class="panel stack">
     <h2>Legături</h2>
-    <ul class="rows">${conn(link.inner, 'Inner Beast', 'Somn, pași, greutate, antrenamente, planul săptămânii')}${conn(link.nutrition, 'Beast Nutrition', 'Calorii, proteine, faza și macronutrienții, apă')}</ul>
+    <ul class="rows">${conn(link.inner, 'Inner Beast', 'Planul de antrenament, somn, pași, greutate, sesiuni făcute')}${conn(link.nutrition, 'Beast Nutrition', 'Faza, calorii și proteine notate, apă. Planul rămâne acolo.')}</ul>
     <p class="faint">Se citesc automat dacă aplicațiile sunt deschise în același browser. Nu scriem nimic în ele.</p>
   </section>
   <section class="panel stack">

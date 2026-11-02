@@ -1,4 +1,5 @@
 /* Sample data, loaded only on request from Settings, so every screen can be seen before there is anything to show. Clearly marked in the UI. */
+import { anchorOptions, setRotation } from './plan.ts';
 import type { Day, Panel, State, TestResult } from './store.ts';
 import { addDays, uid } from './util.ts';
 
@@ -47,7 +48,8 @@ export function demoTests(today: string): TestResult[] {
 }
 
 export function withDemo(s: State, today: string): State {
-  return { ...s, demo: true, days: { ...demoDays(today), ...s.days }, panels: [...s.panels, ...demoPanels(today)], tests: [...s.tests, ...demoTests(today)], profile: { ...s.profile, bf: s.profile.bf ?? 15 } };
+  const roster = s.roster.set ? s.roster : setRotation(s.roster, 'week-forward', anchorOptions('week-forward', today)[1]?.index ?? 0, today);
+  return { ...s, demo: true, roster, days: { ...demoDays(today), ...s.days }, panels: [...s.panels, ...demoPanels(today)], tests: [...s.tests, ...demoTests(today)], profile: { ...s.profile, bf: s.profile.bf ?? 15 } };
 }
 
 /** Removes only what the sample added: panels marked Exemplu and the journal, which is restored from nothing. */

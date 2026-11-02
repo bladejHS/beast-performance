@@ -6,8 +6,8 @@ import { SYSTEMS, type LeverId, type SysId } from '../data/systems.ts';
 import type { Link } from './bridge.ts';
 import { dayView } from './bridge.ts';
 import { latest, type Status } from './labs.ts';
-import { targets, waterFor } from './plan.ts';
-import { avgEA, avgOf, ffm, readiness } from './recovery.ts';
+import { isHard, waterFor, weekPlan } from './plan.ts';
+import { avgEA, avgOf, ffm, readiness, totalSleep } from './recovery.ts';
 import type { State } from './store.ts';
 import { clamp, diffDays, lastDays, mean, sd } from './util.ts';
 
@@ -17,11 +17,12 @@ const ramp = (v: number, lo: number, hi: number) => clamp(((v - lo) / (hi - lo))
 
 export function leverScores(s: State, link: Link, date: string): Record<LeverId, number | null> {
   const days = lastDays(date, 7).map((d) => dayView(s, link, d));
-  const sleep = days.map((d) => d.sleepH).filter((v): v is number => v != null);
+  const sleep = days.map(totalSleep).filter((v): v is number => v != null);
   const done = (id: string) => days.filter((d) => d.done?.includes(id)).length;
   const logged = days.filter((d) => d.done?.length).length;
   const share = (ids: string[]) => (logged >= 2 ? (mean(ids.map(done)) / logged) * 100 : null);
-  const tg = targets(s, link, date);
+  const proteinGoal = link.plan?.p ?? 1.8 * s.profile.weightKg;
+  const planned = weekPlan(link).filter((d) => d.some(isHard)).length;
   const avg = (f: (d: (typeof days)[number]) => number | undefined) => {
     const v = days.map(f).filter((x): x is number => x != null);
     return v.length ? mean(v) : null;
@@ -50,10 +51,10 @@ export function leverScores(s: State, link: Link, date: string): Record<LeverId,
     sleep: sleepScore,
     light: share(['light']),
     energy: energyScore,
-    protein: protein != null ? ramp(protein / tg.p, 0.6, 1) : share(['meal1', 'meal2', 'meal3']),
+    protein: protein != null ? ramp(protein / proteinGoal, 0.6, 1) : share(['meal1', 'meal2', 'meal3']),
     fiber: fiber != null ? ramp(fiber / 30, 0.4, 1) : share(['meal2']),
     fat: share(['meal3']),
-    strength: hasTraining ? ramp(trainDays, 1, Math.max(3, s.profile.trainDays.length - 1)) : share(['train']),
+    strength: hasTraining ? ramp(trainDays, 1, Math.max(3, planned - 1)) : share(['train']),
     cardio: steps != null ? clamp(ramp(steps, 3000, 9000) * 0.8 + (walks / 7) * 20, 0, 100) : share(['walk']),
     calm: stress != null ? clamp(100 - (stress - 1) * 25 + (done('breath') / 7) * 15, 0, 100) : share(['breath']),
     water: water != null ? ramp(water / waterFor(s.profile), 0.5, 1) : share(['water']),
@@ -99,7 +100,7 @@ export function systemStates(states: HormoneState[]): SystemState[] {
 /** Stress and training on one side, sleep and recovery on the other. Negative: load wins. Positive: recovery has room. */
 export function balance(s: State, link: Link, date: string): { value: number; drive: number; repair: number } | null {
   const stress = avgOf(s, link, date, 7, (d) => d.stress);
-  const sleep = avgOf(s, link, date, 7, (d) => d.sleepH);
+  const sleep = avgOf(s, link, date, 7, totalSleep);
   const load = avgOf(s, link, date, 7, (d) => (d.trainMin ? d.trainMin * (d.rpe ?? 5) : undefined));
   const hits = lastDays(date, 7).map((d) => readiness(s, link, d)?.score).filter((v): v is number => v != null);
   if (sleep == null && stress == null) return null;
@@ -165,7 +166,7 @@ export function benchValue(s: State, link: Link, date: string, b: Bench): { v: n
       return { v: Math.round((ffm(p) / (h * h)) * 10) / 10 };
     }
     case 'rhr': { const v = avgOf(s, link, date, 14, (d) => d.rhr); return v ? { v: Math.round(v) } : test ? { v: test.v, date: test.date } : null; }
-    case 'sleepavg': { const v = avgOf(s, link, date, 14, (d) => d.sleepH); return v ? { v: Math.round(v * 10) / 10 } : null; }
+    case 'sleepavg': { const v = avgOf(s, link, date, 14, totalSleep); return v ? { v: Math.round(v * 10) / 10 } : null; }
     case 'energyavg': { const v = avgOf(s, link, date, 14, (d) => d.energy); return v ? { v: Math.round(v * 10) / 10 } : null; }
     case 'readiness': {
       const v = lastDays(date, 14).map((d) => readiness(s, link, d)?.score).filter((x): x is number => x != null);

@@ -5,7 +5,7 @@ import { ctx, actions, persist, render, toast } from '../ui/ctx.ts';
 import { esc, head, hormoneTags, plain, status } from '../ui/parts.ts';
 
 const LEVEL = { urgent: ['urgent', 'Acum'], act: ['act', 'Prioritar'], watch: ['watch', 'De urmărit'], good: ['good', 'În regulă'] } as const;
-const QUICK = ['De ce sunt obosit?', 'Ce fac cu testosteronul?', 'Cum îmi cresc VO2max?', 'Cum scap de foame în cut?'];
+const QUICK = ['Cum dorm după schimbul 3?', 'De ce sunt obosit?', 'Ce fac cu testosteronul?', 'Cum îmi cresc VO2max?'];
 let busy = false;
 
 function reply(q: string) {

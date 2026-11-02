@@ -3,7 +3,7 @@
 import type { PhaseId } from '../data/systems.ts';
 import type { Day, Profile, Sex, State } from './store.ts';
 
-export interface PlanSession { id: string; name: string; kind: string; min: number }
+export interface PlanSession { id: string; name: string; kind: string; min: number; focus?: string }
 
 export interface Link {
   nutrition: boolean; inner: boolean;
@@ -75,7 +75,7 @@ export function readLink(store: Pick<Storage, 'getItem'>): Link {
     out.nutrition = true;
     const who = nutri['profile'];
     if (isObj(who)) {
-      out.profile = { ...out.profile, sex: (who['sex'] === 'f' ? 'f' : 'm') as Sex, age: Number(who['age']) || undefined, heightCm: Number(who['heightCm']) || undefined, weightKg: Number(who['weightKg']) || undefined, bf: Number(who['bf']) || null, activity: Number(who['activity']) || undefined };
+      out.profile = { ...out.profile, sex: (who['sex'] === 'f' ? 'f' : 'm') as Sex, age: Number(who['age']) || undefined, heightCm: Number(who['heightCm']) || undefined, weightKg: Number(who['weightKg']) || undefined, bf: Number(who['bf']) || null };
     }
     const p = nutri['plan'];
     if (isObj(p) && isObj(p['macros'])) {

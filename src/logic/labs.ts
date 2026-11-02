@@ -1,5 +1,6 @@
 /* Bloodwork: units, classification, the derived markers, and reading a pasted lab report. */
 import { BIOMARKER, BIOMARKERS, type Biomarker, type Range } from '../data/biomarkers.ts';
+import { afterNights } from './plan.ts';
 import type { Panel, Sex, State } from './store.ts';
 import { strip } from './util.ts';
 
@@ -144,6 +145,9 @@ export function patterns(s: State): Pattern[] {
   const high = (id: string) => st(id)?.status === 'act' && st(id)?.side === 'high';
   const cut = s.phase.id === 'cut';
 
+  // Taken right after nights, these two say more about the roster than about the body.
+  const timed = ['tt', 'ft', 'cort'].map((id) => l[id]).find((x) => x && afterNights(s, x.date));
+  if (timed) out.push({ id: 'nights', level: 'watch', title: 'Recoltat prea aproape de un schimb 3', body: 'Cortizolul și testosteronul nu sunt de încredere la mai puțin de 3 zile după noapte. Repetă în ziua indicată de aplicație.' });
   if (low('tt') && (low('lh') || (st('lh') && !high('lh')))) out.push({ id: 'central', level: 'act', title: 'Testosteron mic cu LH mic sau normal', body: cut ? 'Tiparul obișnuit în deficit: creierul a redus semnalul. Oprește deficitul 4–8 săptămâni și repetă.' : 'Semnalul de la creier e slab. Verifică energia, somnul, prolactina, feritina. Dacă nu ești în deficit, mergi la endocrinolog.' });
   if (low('tt') && high('lh')) out.push({ id: 'primary', level: 'act', title: 'Testosteron mic cu LH mare', body: 'Creierul cere, dar testiculele nu răspund. Are nevoie de consult de specialitate.' });
   if (high('tsh') && (low('ft4') || st('ft4'))) out.push({ id: 'hypo', level: 'act', title: 'TSH mare', body: low('ft4') ? 'TSH mare cu FT4 mic înseamnă hipotiroidism. Mergi la endocrinolog.' : 'Hipotiroidism subclinic posibil. Repetă în 6–8 săptămâni cu anti-TPO.' });

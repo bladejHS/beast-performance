@@ -84,17 +84,17 @@ export function journal(param?: string): string {
       <h2>Cifrele zilei</h2>
       <p class="faint">Ce vine din Inner Beast sau Beast Nutrition apare ca sugestie. Dacă scrii aici, valoarea ta are prioritate.</p>
       <div class="fields">
-        ${numField('sleepH', 'Somn, ore', own.sleepH, view.sleepH)}
+        ${numField('sleepH', 'Somn principal, ore', own.sleepH, view.sleepH)}
+        ${numField('napMin', 'Somn scurt, minute', own.napMin, '')}
         ${numField('weight', 'Greutate, kg', own.weight, view.weight)}
         ${numField('waist', 'Talie, cm', own.waist, view.waist)}
         ${numField('steps', 'Pași', own.steps, view.steps)}
         ${numField('waterL', 'Apă, litri', own.waterL, view.waterL)}
-        ${numField('kcal', 'Calorii', own.kcal, view.kcal)}
-        ${numField('protein', 'Proteine, g', own.protein, view.protein)}
         ${numField('alcohol', 'Alcool, unități', own.alcohol, '')}
         ${numField('lastCaffeine', 'Ultima cafea', own.lastCaffeine, '', 'time')}
         ${numField('caffeineMg', 'Cafeină, mg', own.caffeineMg, '')}
       </div>
+      ${view.kcal ? `<p class="faint">Din Beast Nutrition: ${view.kcal} kcal, ${view.protein ?? 0} g proteine.</p>` : ''}
       <p class="faint">Puls, HRV, tensiune și antrenament se notează în Recovery.</p>
     </section>
   </div>

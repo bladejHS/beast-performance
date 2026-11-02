@@ -392,7 +392,8 @@ export const ORDER_PANELS: { n: string; when: string; ids: string[] }[] = [
 
 /** Two weeks of care before a test are worth more than interpreting bad data. */
 export const PREP: { t: string; why: string; refs?: string[] }[] = [
-  { t: 'Recoltează între 7 și 10, pe nemâncate, 10–12 ore', why: 'Testosteronul, cortizolul, glicemia și trigliceridele depind de oră și de masă.', refs: ['bhasin2018'] },
+  { t: 'Alege o zi la minimum 3 zile după ultimul schimb 3', why: 'Cortizolul trebuie măsurat în dimineața biologică. După nopți, ritmul e aplatizat, iar testosteronul nu mai are ritm clar. Aplicația îți arată următoarea zi bună.', refs: ['kelly2022', 'axelsson2005'] },
+  { t: 'Recoltează între 7 și 10, pe nemâncate, 10–12 ore, după o noapte de somn', why: 'Testosteronul crește în somn, iar cortizolul, glicemia și trigliceridele depind de oră și de masă. Nu merge înainte de schimbul 1.', refs: ['bhasin2018', 'axelsson2005'] },
   { t: 'Fără antrenament greu cu 48–72 de ore înainte, ideal 7 zile pentru ficat și CK', why: 'Ridicările grele cresc AST, ALT, CK până la cel puțin 7 zile.', refs: ['pettersson2008'] },
   { t: 'Fără biotină în doze mari cu minimum 3 zile înainte', why: 'Poate falsifica testele hormonale și tiroidiene. Confirmă cu laboratorul.', refs: ['li2017', 'fda-biotin'] },
   { t: 'Bea apă normal, doar apă', why: 'Deshidratarea crește hemoglobina, hematocritul și creatinina.' },

@@ -53,6 +53,7 @@ function detail(id: string): string {
   <section><h2>Ce câștigi</h2>${plain(h.gain)}</section>
   <section><h2>Protocolul</h2>${steps(h.steps)}</section>
   ${phaseRows.length ? `<section><h2>Pe faze</h2><ul class="rows">${phaseRows.map((p) => `<li style="padding:9px 0"><b style="${p.id === s.phase.id ? '' : 'color:var(--t2)'}">${esc(PHASE[p.id].n)}${p.id === s.phase.id ? ', faza ta' : ''}</b><div class="muted">${esc(h.phase[p.id] ?? '')}</div></li>`).join('')}</ul></section>` : ''}
+  ${h.shift ? `<section><h2>În ture</h2><p class="muted">${esc(h.shift)}</p></section>` : ''}
   ${h.warn ? `<section class="fix"><h3>Atenție</h3><p class="muted">${esc(h.warn)}</p></section>` : ''}
   ${measured.length ? `<section><h2>Cum se măsoară</h2><ul class="rows">${measured.map((b) => { const v = l[b.id]; return `<li><a class="rowa" href="#/analize/${b.id}"><span class="grow"><b>${esc(b.n)}</b><small>${v ? `Ultima: ${fmtVal(v.value)} ${esc(v.unit)}` : 'Nu ai valoare'}</small></span>${v ? status(v.reading.status) : ''}</a></li>`; }).join('')}</ul></section>` : '<section><h2>Cum se măsoară</h2><p class="muted">Nu se măsoară de rutină. Urmărești rezultatele pârghiilor de mai jos.</p></section>'}
   ${lever.length ? `<section><h2>Pârghiile care îl mișcă</h2><div class="tags">${lever.map((x) => `<span class="tag">${esc(x)}</span>`).join('')}</div></section>` : ''}`;

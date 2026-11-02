@@ -1,4 +1,5 @@
 /* Everything the user logs. It stays in this browser, under its own key; the sibling apps are only read (see bridge.ts). */
+import type { ShiftId } from '../data/shifts.ts';
 import type { PhaseId } from '../data/systems.ts';
 import { dayKey } from './util.ts';
 
@@ -10,26 +11,34 @@ export interface Profile {
   /** Body fat, percent. */
   bf: number | null;
   level: Level;
-  /** 1.2 to 1.9. */
-  activity: number;
-  wake: string; bed: string; trainTime: string;
-  /** Monday = 0. */
-  trainDays: number[];
-  fish: boolean;
+  /** Door to door, one way. */
+  commuteMin: number;
+  /** Hours of sleep wanted in 24 hours. */
+  sleepNeed: number;
+  chronotype: 'early' | 'mid' | 'late';
+}
+
+export interface Roster {
+  rotation: string;
+  pattern: ShiftId[];
+  /** The date of pattern[0]. */
+  start: string;
+  /** Single days changed by hand. */
+  overrides: Record<string, ShiftId>;
+  /** False until the user has chosen a rotation. */
+  set: boolean;
 }
 
 export interface PhaseState {
   id: PhaseId; start: string;
-  /** Percent of body weight per week, null = default for the phase. */
-  rate: number | null;
-  /** Calories at maintenance, null = estimated. */
-  maintenance: number | null;
+  /** The Beast Nutrition phase last followed, to notice when it changes there. */
+  synced?: string;
   history: { id: PhaseId; start: string; end: string }[];
 }
 
 /** One day of the journal. Every field is optional: a day can be half filled. */
 export interface Day {
-  sleepH?: number; sleepQ?: number; bedtime?: string;
+  sleepH?: number; napMin?: number; sleepQ?: number; bedtime?: string;
   stress?: number; energy?: number; mood?: number; hunger?: number; soreness?: number; libido?: number;
   morning?: boolean;
   rhr?: number; hrv?: number; spo2?: number; temp?: number;
@@ -54,6 +63,7 @@ export interface State {
   /** Day the notice was accepted, empty before onboarding. */
   accepted: string;
   profile: Profile;
+  roster: Roster;
   phase: PhaseState;
   days: Record<string, Day>;
   panels: Panel[];
@@ -66,11 +76,13 @@ export interface State {
 
 export const KEY = 'beast-performance:v1';
 
-export const defaultProfile = (): Profile => ({ sex: 'm', age: 30, heightCm: 180, weightKg: 80, bf: null, level: 'mid', activity: 1.55, wake: '07:00', bed: '23:00', trainTime: '17:00', trainDays: [0, 1, 3, 4, 5], fish: false });
+export const defaultProfile = (): Profile => ({ sex: 'm', age: 30, heightCm: 180, weightKg: 80, bf: null, level: 'mid', commuteMin: 30, sleepNeed: 7.5, chronotype: 'mid' });
+
+export const defaultRoster = (today: string): Roster => ({ rotation: 'custom', pattern: [], start: today, overrides: {}, set: false });
 
 export const empty = (today: string = dayKey()): State => ({
-  v: 1, accepted: '', profile: defaultProfile(),
-  phase: { id: 'maintain', start: today, rate: null, maintenance: null, history: [] },
+  v: 1, accepted: '', profile: defaultProfile(), roster: defaultRoster(today),
+  phase: { id: 'maintain', start: today, history: [] },
   days: {}, panels: [], tests: [], focus: [], ai: { key: '', chat: [] }, demo: false,
 });
 
@@ -84,6 +96,7 @@ export function normalize(raw: unknown, today: string = dayKey()): State {
   return {
     ...base, ...r, v: 1,
     profile: { ...base.profile, ...(isObj(r.profile) ? r.profile : {}) },
+    roster: { ...base.roster, ...(isObj(r.roster) ? r.roster : {}) },
     phase: { ...base.phase, ...(isObj(r.phase) ? r.phase : {}) },
     days: isObj(r.days) ? (r.days as Record<string, Day>) : {},
     panels: Array.isArray(r.panels) ? r.panels.filter((p) => isObj(p) && typeof p.date === 'string' && isObj(p.values)) : [],

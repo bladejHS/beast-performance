@@ -1,7 +1,8 @@
 import { BIOMARKER, BIOMARKERS, ORDER_PANELS, PANELS, PREP, type Biomarker } from '../data/biomarkers.ts';
 import { HORMONES } from '../data/hormones.ts';
 import { history, latest, panelsByDate, parseReport, patterns, refFor, optFor, statusCounts, type Parsed } from '../logic/labs.ts';
-import { dateLabel, fmtVal, num, shortDate, uid } from '../logic/util.ts';
+import { bestBloodDay } from '../logic/plan.ts';
+import { DAYS, dateLabel, fmtVal, num, shortDate, uid, weekday } from '../logic/util.ts';
 import { ctx, actions, persist, render, toast } from '../ui/ctx.ts';
 import { back, bullet, cites, esc, empty, head, hormoneTags, lineChart, plain, status } from '../ui/parts.ts';
 
@@ -52,7 +53,7 @@ const tabs = (cur: string) => `<nav class="tabs" aria-label="Analize">${[['', 'R
 
 function results(): string {
   const { s } = ctx, l = latest(s);
-  if (!s.panels.length) return empty('Nu ai încă analize', 'Lipește textul de la laborator sau scrie valorile. Primești imediat ce înseamnă fiecare și cum corectezi ce nu e bine.', '#/analize/adauga', 'Adaugă analize');
+  if (!s.panels.length) return `${bloodDay()}${empty('Nu ai încă analize', 'Lipește textul de la laborator sau scrie valorile. Primești imediat ce înseamnă fiecare și cum corectezi ce nu e bine.', '#/analize/adauga', 'Adaugă analize')}`;
   const c = statusCounts(s), pats = patterns(s);
   const row = (b: Biomarker) => {
     const x = l[b.id]; if (!x) return '';
@@ -93,8 +94,10 @@ function order(): string {
   return `${ORDER_PANELS.map((p) => `<section class="panel stack"><h2>${esc(p.n)}</h2><p class="muted">${esc(p.when)}</p><div class="tags">${p.ids.map((id) => `<a class="tag" href="#/analize/${id}">${esc(BIOMARKER[id]?.n ?? id)}</a>`).join('')}</div></section>`).join('')}`;
 }
 
+const bloodDay = () => { const d = ctx.s.roster.set ? bestBloodDay(ctx.s, ctx.today) : null; return d ? `<div class="panel stack" style="margin-bottom:12px"><h3>Următoarea zi bună: ${DAYS[weekday(d)]}, ${esc(dateLabel(d))}</h3><p class="muted small">Ai dimineața liberă, ai dormit noaptea și ești la minimum 3 zile după schimbul 3.</p></div>` : ''; };
+
 function prep(): string {
-  return `<p class="muted" style="margin-bottom:10px">O analiză făcută prost te duce la concluzii greșite. Asta contează în zilele de dinainte.</p>
+  return `${bloodDay()}<p class="muted" style="margin-bottom:10px">O analiză făcută prost te duce la concluzii greșite. Asta contează în zilele de dinainte.</p>
   <ul class="steps">${PREP.map((p) => `<li><div class="grow"><b>${esc(p.t)}</b><div class="muted">${esc(p.why)}</div>${cites(p.refs)}</div></li>`).join('')}</ul>`;
 }
 

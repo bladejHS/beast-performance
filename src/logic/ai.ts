@@ -5,16 +5,17 @@ import { BIOMARKERS } from '../data/biomarkers.ts';
 import { HORMONES } from '../data/hormones.ts';
 import { DOMAINS } from '../data/performance.ts';
 import { PHASE } from '../data/phases.ts';
+import { GUIDES, SHIFT } from '../data/shifts.ts';
 import { SYMPTOMS } from '../data/symptoms.ts';
 import type { Link } from './bridge.ts';
 import { dayView } from './bridge.ts';
 import { findings, phaseVerdict } from './insights.ts';
 import { latest } from './labs.ts';
-import { targets } from './plan.ts';
-import { avgOf, readiness } from './recovery.ts';
+import { frame, phaseWeek, shiftOn } from './plan.ts';
+import { avgOf, readiness, totalSleep } from './recovery.ts';
 import { domainStates } from './score.ts';
 import type { ChatMsg, State } from './store.ts';
-import { lastDays, strip } from './util.ts';
+import { addDays, fromMin, lastDays, strip } from './util.ts';
 
 export const MODEL = 'claude-opus-5-5';
 
@@ -45,6 +46,10 @@ export function searchKnowledge(q: string): LocalHit[] {
     const v = score(y.n, y.causes.join(' '));
     if (v) hits.push({ title: y.n, text: `Primul pas: ${y.fix[0] ?? ''}`, href: `#/jurnal/${y.id}`, score: v });
   }
+  for (const g of GUIDES) {
+    const v = score(`${g.n} schimb tura noapte`, `${g.hard} ${g.sleep} ${g.light} ${g.caffeine} ${g.food} ${g.train}`);
+    if (v) hits.push({ title: g.n, text: `${g.hard} ${g.sleep}`, href: '#/protocol', score: v });
+  }
   for (const d of DOMAINS) {
     const v = score(d.n, `${d.line} ${d.target}`);
     if (v) hits.push({ title: d.n, text: d.dose, href: `#/performanta/${d.id}`, score: v });
@@ -54,7 +59,7 @@ export function searchKnowledge(q: string): LocalHit[] {
 
 /** The whole context the model sees: a short summary, never the raw journal. */
 export function contextFor(s: State, link: Link, date: string): string {
-  const p = s.profile, tg = targets(s, link, date);
+  const p = s.profile, f = frame(s, date), next = lastDays(addDays(date, 7), 7).map((d) => SHIFT[shiftOn(s.roster, d)].short);
   const l = Object.values(latest(s)).filter((x) => x.reading.status !== 'none');
   const avg = (f: Parameters<typeof avgOf>[4]) => {
     const v = avgOf(s, link, date, 7, f);
@@ -66,8 +71,9 @@ export function contextFor(s: State, link: Link, date: string): string {
   const sym = Object.entries(dayView(s, link, date).sym ?? {}).map(([k, v]) => `${k}:${v}`);
   return [
     `Profil: ${p.sex === 'm' ? 'bărbat' : 'femeie'}, ${p.age} ani, ${p.heightCm} cm, ${p.weightKg} kg, grăsime ${p.bf ?? 'necunoscută'}%, nivel ${p.level}.`,
-    `Fază: ${PHASE[s.phase.id].n}, săptămâna ${tg.week}. Ținte: ${tg.kcal} kcal, P ${tg.p} g, C ${tg.c} g, G ${tg.f} g.`,
-    `Medii 7 zile: somn ${avg((d) => d.sleepH)} h, stres ${avg((d) => d.stress)}/5, energie ${avg((d) => d.energy)}/5, pași ${avg((d) => d.steps)}.`,
+    `Fază: ${PHASE[s.phase.id].n}, săptămâna ${phaseWeek(s, date)}.`,
+    `Azi: ${SHIFT[f.shift].n}, ${SHIFT[f.shift].label}. Trezire ${fromMin(f.wake)}, somn ${fromMin(f.bed)}, a dormit înainte ${(f.sleepMin / 60).toFixed(1)} ore. Următoarele 7 zile: ${next.join(', ')}.`,
+    `Medii 7 zile: somn ${avg(totalSleep)} h, stres ${avg((d) => d.stress)}/5, energie ${avg((d) => d.energy)}/5, pași ${avg((d) => d.steps)}.`,
     `Disponibilitate azi: ${r ? `${r.score}/100` : 'necunoscută'}.`,
     `Domenii de performanță: ${dom.join(', ') || 'fără teste'}.`,
     `Analize recente: ${l.slice(0, 40).map((x) => `${x.id}=${x.value} ${x.unit} (${x.reading.status}, ${x.date})`).join('; ') || 'niciuna'}.`,
@@ -81,6 +87,8 @@ export function contextFor(s: State, link: Link, date: string): string {
 export const SYSTEM = `Ești analistul din Beast Performance, o aplicație personală de performanță și sănătate hormonală, pentru un sportiv natural.
 Răspunzi în română, simplu, pentru cineva care nu știe ce face fiecare hormon: mai întâi ce să facă, apoi de ce.
 Obiectivul lui este performanță maximă în toate domeniile: definire, forță, masă, condiționare, viteză, recuperare, sănătate.
+Lucrează în trei schimburi: 06:00–14:00, 14:00–22:00, 22:00–06:00. Ține cont de schimb la orice sfat despre somn, lumină, cafea și ora antrenamentului.
+Planul de mâncare și macronutrienții sunt în Beast Nutrition, planul de antrenament e în Inner Beast. Nu construi alte planuri: spui doar ce să ajusteze în ele.
 Reguli:
 - Folosește datele din context. Dacă o informație lipsește, spune ce trebuie măsurat.
 - Separă ce arată studiile de ce e practică de antrenor. Nu inventa cifre sau studii.
