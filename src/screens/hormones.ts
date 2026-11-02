@@ -3,7 +3,7 @@ import { DIR, HORMONE, HORMONES } from '../data/hormones.ts';
 import { PHASE, PHASES } from '../data/phases.ts';
 import { GLANDS, LEVERS, SYSTEMS } from '../data/systems.ts';
 import { latest } from '../logic/labs.ts';
-import { hormoneStates, type HormoneState } from '../logic/score.ts';
+import { HABIT, hormoneStates, type HormoneState } from '../logic/score.ts';
 import { dateLabel, fmtVal, strip } from '../logic/util.ts';
 import { ctx, actions } from '../ui/ctx.ts';
 import { back, esc, head, plain, status, steps } from '../ui/parts.ts';
@@ -22,7 +22,7 @@ function rows(states: HormoneState[]): string {
   const q = strip(query);
   const list = states.filter((x) => (!sys || x.h.sys === sys) && (!q || strip(`${x.h.n} ${x.h.en} ${x.h.what}`).includes(q)));
   if (!list.length) return '<p class="muted">Niciun hormon nu se potrivește. Încearcă alt cuvânt.</p>';
-  return `<ul class="rows">${list.map((x) => `<li><a class="rowa" href="#/hormoni/${x.h.id}"><span class="glyph" aria-hidden="true">${DIR[x.h.dir].glyph}</span><span class="grow"><b>${esc(x.h.n)}</b><small>${esc(x.h.en)}. ${esc(DIR[x.h.dir].n)}.</small></span>${x.status === 'none' ? '' : status(x.status)}</a></li>`).join('')}</ul>`;
+  return `<ul class="rows">${list.map((x) => `<li><a class="rowa" href="#/hormoni/${x.h.id}"><span class="glyph" aria-hidden="true">${DIR[x.h.dir].glyph}</span><span class="grow"><b>${esc(x.h.n)}</b><small>${esc(x.h.en)}. ${esc(DIR[x.h.dir].n)}.</small></span>${x.status === 'none' ? '' : status(x.status, x.source === 'habits' ? HABIT[x.status] : undefined)}</a></li>`).join('')}</ul>`;
 }
 
 function drawList() {
@@ -47,7 +47,7 @@ function detail(id: string): string {
   <section class="panel stack" style="margin-top:14px">
     <div class="between"><h3>Direcția bună</h3><span aria-hidden="true" class="num">${DIR[h.dir].glyph}</span></div>
     <p>${esc(h.goal)}</p>
-    <div class="between">${status(st.status)}<span class="faint">${st.source === 'blood' ? `Din analize, ${st.date ? esc(dateLabel(st.date)) : ''}` : st.source === 'habits' ? 'Estimat din obiceiuri, nu e o măsurătoare' : 'Fără date încă'}</span></div>
+    <div class="between">${status(st.status, st.source === 'habits' ? HABIT[st.status] : undefined)}<span class="faint">${st.source === 'blood' ? `Din analize, ${st.date ? esc(dateLabel(st.date)) : ''}` : st.source === 'habits' ? 'Estimat din obiceiuri, nu e o măsurătoare' : 'Fără date încă'}</span></div>
   </section>
   <section><h2>Ce face</h2><p class="muted">${esc(h.what)}</p></section>
   <section><h2>Ce câștigi</h2>${plain(h.gain)}</section>

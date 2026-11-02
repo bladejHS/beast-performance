@@ -1,6 +1,6 @@
 import { PHASE } from '../data/phases.ts';
 import { findings } from '../logic/insights.ts';
-import { statusCounts, STATUS } from '../logic/labs.ts';
+import { statusCounts } from '../logic/labs.ts';
 import { targets } from '../logic/plan.ts';
 import { avgEA, avgOf, readiness, series, weightTrend, ZONE } from '../logic/recovery.ts';
 import { balance, domainStates, hormoneStates, scoreStatus, systemStates } from '../logic/score.ts';
@@ -9,6 +9,7 @@ import { ctx } from '../ui/ctx.ts';
 import { emblem, empty, esc, meter, ring, spark, status } from '../ui/parts.ts';
 
 const LEVEL = { urgent: 'urgent', act: 'act', watch: 'watch', good: 'good' } as const;
+const WORD = { good: 'bine', watch: 'de urmărit', act: 'de lucrat', none: 'fără date' } as const;
 
 export function overview(): string {
   const { s, link, today } = ctx;
@@ -34,7 +35,7 @@ export function overview(): string {
   <div class="ov">
     <div>
       <div class="ringbox">${ring(states)}<img class="wolf" src="${emblem()}" alt="" width="680" height="801"></div>
-      <div class="ringcap">${(['good', 'watch', 'act', 'none'] as const).filter((k) => tally[k]).map((k) => status(k, `${tally[k]} ${STATUS[k].n.toLowerCase()}`)).join('')}</div>
+      <div class="ringcap">${(['good', 'watch', 'act', 'none'] as const).filter((k) => tally[k]).map((k) => status(k, `${tally[k]} ${WORD[k]}`)).join('')}</div>
       <p class="faint" style="text-align:center;margin-top:4px">${blood + habits ? `${blood ? `${blood} din analize, ` : ''}${habits} estimați din obiceiuri. Atinge un segment pentru hormon.` : 'Fiecare segment e un hormon. Se aprind pe măsură ce notezi și adaugi analize.'}</p>
     </div>
     <div class="stack">

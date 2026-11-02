@@ -49,7 +49,7 @@ export function ring(states: HormoneState[]): string {
     for (const x of g) {
       const a0 = ((angle + 0.42) * Math.PI) / 180, a1 = ((angle + step - 0.42) * Math.PI) / 180;
       const inner = 80, outer = inner + len[x.status];
-      const label = `${x.h.n}: ${STATUS[x.status].n}${x.source === 'habits' ? ', estimat din obiceiuri' : x.source === 'blood' ? ', din analize' : ''}`;
+      const label = x.source === 'habits' ? `${x.h.n}: estimat din obiceiuri` : `${x.h.n}: ${STATUS[x.status].n}${x.source === 'blood' ? ', din analize' : ''}`;
       out += `<a href="#/hormoni/${x.h.id}" aria-label="${esc(label)}"><title>${esc(label)}</title><path fill="${COLOR[x.status]}" opacity="${x.source === 'habits' ? 0.72 : 1}" d="M${pt(inner, a0)}L${pt(outer, a0)}L${pt(outer, a1)}L${pt(inner, a1)}Z"/></a>`;
       angle += step;
     }

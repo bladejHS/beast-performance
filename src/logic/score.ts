@@ -62,6 +62,9 @@ export function leverScores(s: State, link: Link, date: string): Record<LeverId,
   };
 }
 
+/** An estimate from habits is never worded like a lab result. */
+export const HABIT: Partial<Record<Status, string>> = { good: 'Obiceiuri bune', watch: 'Obiceiuri parțiale', act: 'Obiceiuri slabe' };
+
 export interface HormoneState { h: Hormone; status: Status; score: number | null; source: 'blood' | 'habits' | 'none'; marker?: string; date?: string }
 
 export function hormoneStates(s: State, link: Link, date: string): HormoneState[] {
